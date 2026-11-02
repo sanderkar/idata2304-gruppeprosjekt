@@ -1,0 +1,17 @@
+# Maven build output
+/target/
+
+# IntelliJ and local editor settings
+/.idea/
+*.iml
+/.vscode/
+/out/
+
+# Local README files and the AI-generated protocol draft (temporary)
+[Rr][Ee][Aa][Dd][Mm][Ee]*
+/protocol.md
+
+# Local logs and operating system files
+*.log
+.DS_Store
+Thumbs.db
