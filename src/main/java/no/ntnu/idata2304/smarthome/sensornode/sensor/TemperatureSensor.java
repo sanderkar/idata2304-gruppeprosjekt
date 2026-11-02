@@ -60,7 +60,6 @@ public class TemperatureSensor {
    */
 
   public void simulateTemperatureChange() {
-    // Simulate a temperature change by adding a random value between -0.5 and 0.5
     double change = (random.nextDouble() - 0.5);
     this.temperature += change;
   }
