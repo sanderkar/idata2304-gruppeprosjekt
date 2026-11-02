@@ -11,10 +11,16 @@ public class Heater {
    * Constructs a Heater with the specified heater ID.
    *
    * @param heaterId the unique identifier for the heater
+   * @throws IllegalArgumentException if the heater ID is negative
    */
 
 
   public Heater(int heaterId) {
+
+    if (heaterId < 0) {
+      throw new IllegalArgumentException("Heater ID must be a non-negative integer.");
+    }
+
     this.heaterId = heaterId;
   }
 

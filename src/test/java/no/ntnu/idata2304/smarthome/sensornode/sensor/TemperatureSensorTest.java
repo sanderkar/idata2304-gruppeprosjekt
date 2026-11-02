@@ -11,7 +11,7 @@ public class TemperatureSensorTest {
 
   public void idSavesAndReturnsCorrectly() {
     TemperatureSensor sensor = new TemperatureSensor(1, 25.0);
-    assertEquals(1, sensor.getSensorId());
+    assertEquals(1, sensor.getTempSensorId());
   }
 
   @Test

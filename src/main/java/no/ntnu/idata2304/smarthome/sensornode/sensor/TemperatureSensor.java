@@ -8,19 +8,25 @@ import java.util.Random;
 
 public class TemperatureSensor {
 
-  private final int sensorId;
+  private final int tempSensorId;
   private double temperature;
   private final Random random;
 
   /**
    * Constructs a TemperatureSensor with the specified sensor ID and initial temperature.
    *
-   * @param sensorId    the unique identifier for the sensor
+   * @param tempSensorId    the unique identifier for the sensor
    * @param temperature the initial temperature reading
+   * @throws IllegalArgumentException if the sensor ID is negative
    */
 
-  public TemperatureSensor(int sensorId, double temperature) {
-    this.sensorId = sensorId;
+  public TemperatureSensor(int tempSensorId, double temperature) {
+
+    if (tempSensorId < 0) {
+      throw new IllegalArgumentException("Sensor ID must be a non-negative integer.");
+    }
+
+    this.tempSensorId = tempSensorId;
     this.temperature = temperature;
     this.random = new Random();
   }
@@ -51,8 +57,8 @@ public class TemperatureSensor {
    * @return the sensor ID
    */
 
-  public int getSensorId() {
-    return sensorId;
+  public int getTempSensorId() {
+    return tempSensorId;
   }
 
   /**
