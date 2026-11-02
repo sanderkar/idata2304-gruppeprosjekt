@@ -1,5 +1,6 @@
 package no.ntnu.idata2304.smarthome.sensornode;
 
+import no.ntnu.idata2304.smarthome.common.protocol.TurnOnHeaterCommand;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Heater;
 import no.ntnu.idata2304.smarthome.sensornode.sensor.TemperatureSensor;
 import java.util.ArrayList;
@@ -22,6 +23,12 @@ public class SensorNode {
    */
 
   public SensorNode(int nodeId) {
+
+    if (nodeId < 0) {
+      throw new IllegalArgumentException("Node ID must be a non-negative integer.");
+    }
+
+
     this.nodeId = nodeId;
     this.temperatureSensors = new ArrayList<>();
     this.heaters = new ArrayList<>();
@@ -42,9 +49,15 @@ public class SensorNode {
    * Adds a temperature sensor to the sensor node.
    *
    * @param sensor the temperature sensor to add
+   * @throws IllegalArgumentException if a temperature sensor with the same ID already exists
    */
 
   public void addTemperatureSensor(TemperatureSensor sensor) {
+    for (TemperatureSensor existingSensor : temperatureSensors) {
+      if (existingSensor.getTempSensorId() == sensor.getTempSensorId()) {
+        throw new IllegalArgumentException("Temperature sensor with ID " + sensor.getTempSensorId() + " already exists.");
+      }
+    }
     temperatureSensors.add(sensor);
   }
 
@@ -79,12 +92,20 @@ public class SensorNode {
   }
 
   /**
-   * Adds a heater to the sensor node.
+   * Adds a heater to the sensor node. If a heater with the same ID already exists, an exception is thrown.
    *
    * @param heater the heater to add
+   * @throws IllegalArgumentException if a heater with the same ID already exists
    */
 
   public void addHeater(Heater heater) {
+
+    for (Heater existingHeater : heaters) {
+      if (existingHeater.getHeaterId() == heater.getHeaterId()) {
+        throw new IllegalArgumentException("Heater with ID " + heater.getHeaterId() + " already exists.");
+      }
+    }
+
     heaters.add(heater);
   }
 
@@ -106,6 +127,19 @@ public class SensorNode {
   }
 
   /**
+   * Handles a heater command only when it is addressed to this node.
+   *
+   * @param command the command to handle
+   * @return true if this node contains the requested heater, false otherwise
+   */
+  public boolean handleTurnOnHeaterCommand(TurnOnHeaterCommand command) {
+    if (command.getNodeId() != nodeId) {
+      return false;
+    }
+    return turnOnHeater(command.getHeaterId());
+  }
+
+  /**
    * Turns off the heater with the specified heater ID.
    *
    * @param heaterId the unique identifier of the heater to turn off
@@ -121,5 +155,7 @@ public class SensorNode {
     }
     return false;
   }
+
+  
 
 }
