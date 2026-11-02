@@ -1,18 +1,21 @@
 package no.ntnu.idata2304.smarthome.server;
 
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 /**
- * Entry point for a future intermediate smart-home server.
+ * Entry point
  */
 public final class ServerApplication {
 
-  private ServerApplication() {}
+  private ServerSocket serverSocket;
 
-  /**
-   * Runs the server scaffold. Socket communication is not implemented yet.
-   *
-   * @param args command-line arguments (currently unused)
-   */
-  public static void main(String[] args) {
-    System.out.println("Server scaffold ready. Socket communication is not implemented yet.");
+  // constructor
+  private ServerApplication(int port) throws IOException {
+    this.serverSocket = new ServerSocket(port);
   }
+
+  public static void main(String[] args) {
+  }
+
 }
