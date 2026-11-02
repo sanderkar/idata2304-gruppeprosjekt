@@ -1,5 +1,7 @@
 package no.ntnu.idata2304.smarthome.sensornode;
 
+import no.ntnu.idata2304.smarthome.sensornode.sensor.TemperatureSensor;
+
 /**
  * Entry point for a future simulated sensor-actuator node.
  */
@@ -14,6 +16,6 @@ public final class SensorNodeApplication {
    * @param args command-line arguments (currently unused)
    */
   public static void main(String[] args) {
-    System.out.println("Sensor-node scaffold ready. Sensors and actuators are not implemented yet.");
+    System.out.println("Sensor Node Application started.");
   }
 }
