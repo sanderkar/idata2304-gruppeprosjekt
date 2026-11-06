@@ -39,6 +39,7 @@ public class TemperatureSensor {
 
   public double getTemperature() {
     return temperature;
+
   }
 
   /**

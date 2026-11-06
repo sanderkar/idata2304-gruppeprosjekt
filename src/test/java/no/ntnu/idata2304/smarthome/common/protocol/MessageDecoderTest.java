@@ -54,4 +54,45 @@ public class MessageDecoderTest {
     });
   }
 
+  @Test
+  public void decodesNodeRegistration() {
+    String message = "HELLO_NODE;1;12;node-example";
+    NodeRegistration registration = MessageDecoder.decodeNodeRegistration(message);
+    assertEquals("node-example", registration.getToken());
+  }
+
+  @Test
+  public void rejectsNonNumericNodeId() {
+    String message = "HELLO_NODE;1;abc;node-example";
+    assertThrows(NumberFormatException.class, () -> {
+      MessageDecoder.decodeNodeRegistration(message);
+    });
+  }
+
+  @Test
+  public void rejectsNegativeNodeId() {
+    String message = "HELLO_NODE;1;-5;node-example";
+    assertThrows(IllegalArgumentException.class, () -> {
+      MessageDecoder.decodeNodeRegistration(message);
+    });
+  }
+
+  @Test
+  public void  rejectsUnsupportedProtocolVersion() {
+    String message = "HELLO_NODE;2;12;node-example";
+    assertThrows(IllegalArgumentException.class, () -> {
+      MessageDecoder.decodeNodeRegistration(message);
+    });
+  }
+
+  @Test
+  public void acceptsTokenWith128Characters() {
+    String token = "a".repeat(128);
+    String message = "HELLO_NODE;1;12;" + token;
+
+    NodeRegistration registration = MessageDecoder.decodeNodeRegistration(message);
+
+    assertEquals(12, registration.getNodeId());
+  }
+
 }
