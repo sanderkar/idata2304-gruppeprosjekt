@@ -2,6 +2,7 @@ package no.ntnu.idata2304.smarthome.sensornode;
 
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
+import no.ntnu.idata2304.smarthome.sensornode.actuator.Heater;
 import no.ntnu.idata2304.smarthome.sensornode.sensor.TemperatureSensor;
 
 import java.io.BufferedReader;
@@ -57,21 +58,28 @@ public final class SensorNodeApplication {
         return;
       }
 
+      var node = new SensorNode(nodeId);
       var sensor = new TemperatureSensor(1, 22.0);
+      var heater = new Heater(1);
+
+      node.addTemperatureSensor(sensor);
+      node.addHeater(heater);
       String command;
       while ((command = reader.readLine()) != null) {
-        Protocol.writeLine(writer, respondToCommand(command, nodeId, sensor));
+        Protocol.writeLine(writer, respondToCommand(command, nodeId, sensor, heater));
       }
     }
   }
 
-  private static String respondToCommand(String command, int nodeId, TemperatureSensor sensor) {
+  static String respondToCommand(String command, int nodeId, TemperatureSensor sensor, Heater heater) {
     try {
       if (command.split(";", 2)[0].equals("LIST_DEVICES")) {
         if (MessageDecoder.decodeListDevices(command) != nodeId) {
           return "ERROR;WRONG_NODE";
         }
-        return "DEVICES;" + nodeId + ";SENSOR:" + sensor.getTempSensorId() + ":TEMPERATURE";
+        return "DEVICES;" + nodeId
+            + ";SENSOR:" + sensor.getTempSensorId() + ":TEMPERATURE"
+            + ";ACTUATOR:" + heater.getHeaterId() + ":HEATER";
       }
 
       var request = MessageDecoder.decodeGetReading(command);
