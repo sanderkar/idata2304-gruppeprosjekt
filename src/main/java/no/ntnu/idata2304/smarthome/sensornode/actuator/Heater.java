@@ -2,7 +2,7 @@ package no.ntnu.idata2304.smarthome.sensornode.actuator;
 /**
  * Represents a heater in the smart home system.
  */
-public class Heater {
+public class Heater implements Actuator {
 
   private final int heaterId;
   private boolean isOn;
@@ -38,6 +38,7 @@ public class Heater {
    * Turns the heater on.
    */
 
+  @Override
   public void turnOn() {
     isOn = true;
   }
@@ -45,7 +46,7 @@ public class Heater {
   /**
    * Turns the heater off.
    */
-
+  @Override
   public void turnOff() {
     isOn = false;
   }
@@ -55,8 +56,32 @@ public class Heater {
    *
    * @return true if the heater is on, false otherwise
    */
-
+  @Override
   public boolean isOn() {
     return isOn;
   }
+
+  /**
+   * Returns the unique identifier for the actuator (heater).
+   *
+   * @return the actuator ID
+   */
+
+  @Override
+  public int getActuatorId() {
+    return heaterId;
+  }
+
+  /**
+   * Returns the type of the actuator, which is "Heater" in this case.
+   *
+   * @return the actuator type
+   */
+
+  @Override
+  public String getType() {
+    return "HEATER";
+  }
+
+
 }
