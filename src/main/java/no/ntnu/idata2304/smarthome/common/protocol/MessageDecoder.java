@@ -85,10 +85,30 @@ public class MessageDecoder {
     return Integer.parseInt(fields[1]);
   }
 
+  /**
+   * Represents a request to get a reading from a sensor.
+   *
+   * @param nodeId the ID of the node
+   * @param sensorId the ID of the sensor
+   */
   public record ReadingRequest(int nodeId, int sensorId) {}
 
+  /**
+   * Represents a command to control an actuator.
+   *
+   * @param nodeId the ID of the node
+   * @param actuatorId the ID of the actuator
+   * @param state the state to set the actuator to
+   */
   public record ActuatorCommand(int nodeId, int actuatorId, String state) {}
 
+  /**
+   * Decodes a string message into an ActuatorCommand.
+   *
+   * @param message the string message to decode
+   * @return the decoded ActuatorCommand
+   * @throws IllegalArgumentException if the message format is invalid
+   */
   public static ActuatorCommand decodeActuator(String message) {
     String[] fields = message.split(";", -1);
     if (fields.length != 4 || !fields[0].equals("SET_ACTUATOR")
