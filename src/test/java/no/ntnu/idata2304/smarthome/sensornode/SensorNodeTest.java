@@ -150,9 +150,9 @@ public class SensorNodeTest {
     Heater heater2 = new Heater(2);
     node.addHeater(heater1);
     node.addHeater(heater2);
-    assertEquals(2, node.getHeaters().size());
-    assertTrue(node.getHeaters().contains(heater1));
-    assertTrue(node.getHeaters().contains(heater2));
+    assertEquals(2, node.getActuators().size());
+    assertTrue(node.getActuators().contains(heater1));
+    assertTrue(node.getActuators().contains(heater2));
   }
 
   @Test
@@ -160,9 +160,9 @@ public class SensorNodeTest {
     SensorNode node = new SensorNode(1);
     Heater heater = new Heater(1);
     node.addHeater(heater);
-    var heaters = node.getHeaters();
+    var heaters = node.getActuators();
     assertThrows(UnsupportedOperationException.class, () -> heaters.add(new Heater(2)));
-    assertEquals(1, node.getHeaters().size());
+    assertEquals(1, node.getActuators().size());
   }
 
   @Test
@@ -255,9 +255,9 @@ public class SensorNodeTest {
     node.addHeater(heater1);
 
     assertThrows(IllegalArgumentException.class, () -> node.addHeater(heater2));
-    assertEquals(1, node.getHeaters().size());
+    assertEquals(1, node.getActuators().size());
     // AI-assisted change: verify that the original heater object is retained.
-    assertSame(heater1, node.getHeaters().get(0));
+    assertSame(heater1, node.getActuators().get(0));
   }
 
   @Test
