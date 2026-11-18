@@ -73,45 +73,57 @@ public final class SensorNodeApplication {
 
   static String respondToCommand(String command, int nodeId, TemperatureSensor sensor, Heater heater) {
     try {
-      if (command.split(";", 2)[0].equals("LIST_DEVICES")) {
-        if (MessageDecoder.decodeListDevices(command) != nodeId) {
-          return "ERROR;WRONG_NODE";
+      switch (command.split(";", 2)[0]) {
+        case "LIST_DEVICES" -> {
+          if (MessageDecoder.decodeListDevices(command) != nodeId) {
+            return "ERROR;WRONG_NODE";
+          }
+          return "DEVICES;" + nodeId
+              + ";SENSOR:" + sensor.getTempSensorId() + ":TEMPERATURE"
+              + ";ACTUATOR:" + heater.getHeaterId() + ":HEATER";
         }
-        return "DEVICES;" + nodeId
-            + ";SENSOR:" + sensor.getTempSensorId() + ":TEMPERATURE"
-            + ";ACTUATOR:" + heater.getHeaterId() + ":HEATER";
-      }
+        case "TURN_ON_HEATER" -> {
+          var heaterCommand = MessageDecoder.decodeTurnOnHeater(command);
 
-      if (command.split(";", 2)[0].equals("TURN_ON_HEATER")) {
-        var heaterCommand = MessageDecoder.decodeTurnOnHeater(command);
+          if (heaterCommand.getNodeId() != nodeId) {
+            return "ERROR;WRONG_NODE";
+          }
 
-        if (heaterCommand.getNodeId() != nodeId) {
-          return "ERROR;WRONG_NODE";
+          if (heaterCommand.getHeaterId() != heater.getHeaterId()) {
+            return "ERROR;UNKNOWN_ACTUATOR";
+          }
+
+          heater.turnOn();
+          return "ACTUATOR_STATE;" + nodeId + ";" + heater.getHeaterId()
+              + ";HEATER;" + (heater.isOn() ? "ON" : "OFF");
+        }
+        case "TURN_OFF_HEATER" -> {
+          var heaterCommand = MessageDecoder.decodeTurnOffHeater(command);
+
+          if (heaterCommand.getNodeId() != nodeId) {
+            return "ERROR;WRONG_NODE";
+          }
+
+          if (heaterCommand.getHeaterId() != heater.getHeaterId()) {
+            return "ERROR;UNKNOWN_ACTUATOR";
+          }
+
+          heater.turnOff();
+          return "ACTUATOR_STATE;" + nodeId + ";" + heater.getHeaterId()
+              + ";HEATER;" + (heater.isOn() ? "ON" : "OFF");
+        }
+        case "GET_ACTUATOR" -> {
+          var status = MessageDecoder.decodeGetActuator(command);
+          if (status.nodeId() != nodeId) {
+            return "ERROR;WRONG_NODE";
+          }
+          if (status.actuatorId() != heater.getHeaterId()) {
+            return "ERROR;UNKNOWN_ACTUATOR";
+          }
+          return "ACTUATOR_STATE;" + nodeId + ";" + heater.getHeaterId()
+              + ";HEATER;" + (heater.isOn() ? "ON" : "OFF");
         }
 
-        if (heaterCommand.getHeaterId() != heater.getHeaterId()) {
-          return "ERROR;UNKNOWN_ACTUATOR";
-        }
-
-        heater.turnOn();
-        return "ACTUATOR_STATE;" + nodeId + ";" + heater.getHeaterId()
-            + ";HEATER;" + (heater.isOn() ? "ON" : "OFF");
-      }
-
-      if (command.split(";", 2)[0].equals("TURN_OFF_HEATER")) {
-        var heaterCommand = MessageDecoder.decodeTurnOffHeater(command);
-
-        if (heaterCommand.getNodeId() != nodeId) {
-          return "ERROR;WRONG_NODE";
-        }
-
-        if (heaterCommand.getHeaterId() != heater.getHeaterId()) {
-          return "ERROR;UNKNOWN_ACTUATOR";
-        }
-
-        heater.turnOff();
-        return "ACTUATOR_STATE;" + nodeId + ";" + heater.getHeaterId()
-            + ";HEATER;" + (heater.isOn() ? "ON" : "OFF");
       }
 
       var request = MessageDecoder.decodeGetReading(command);

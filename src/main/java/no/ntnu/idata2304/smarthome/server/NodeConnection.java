@@ -1,5 +1,6 @@
 package no.ntnu.idata2304.smarthome.server;
 
+import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder.ActuatorRequest;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder.ReadingRequest;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageEncoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
@@ -23,30 +24,66 @@ final class NodeConnection {
   private boolean active;
   private CompletableFuture<String> pending;
 
+  /**
+   * Constructs a NodeConnection with the specified socket and writer.
+   *
+   * @param socket the socket representing the connection to the sensor node
+   * @param writer the writer for sending messages to the sensor node
+   */
+  
   NodeConnection(Socket socket, Writer writer) {
     this.socket = socket;
     this.writer = writer;
   }
+  
+  /**
+   * Sends a "READY" message to the sensor node, indicating that the connection is active.
+   *
+   * @throws IOException if an I/O error occurs while sending the message
+   */
 
   synchronized void sendReady() throws IOException {
     Protocol.writeLine(writer, "READY;1");
     active = true;
   }
+  
+  /**
+   * Checks if the connection to the sensor node is active.
+   *
+   * @return true if the connection is active, false otherwise
+   */
 
   synchronized boolean isActive() {
     return active;
   }
+  
+  /**
+   * Receives a response from the sensor node and completes the pending request if applicable.
+   *
+   * @param response the response received from the sensor node
+   * @return true if there was a pending request and it was completed, false otherwise
+   */
 
   synchronized boolean receiveResponse(String response) {
     return pending != null && pending.complete(response);
   }
 
+  /**
+   * Marks the connection to the sensor node as disconnected.
+   */
   synchronized void markDisconnected() {
     active = false;
     if (pending != null) {
       pending.complete("ERROR;NODE_UNAVAILABLE");
     }
   }
+  
+  /**
+   * Requests a temperature reading from the sensor node.
+   *
+   * @param request the reading request containing node ID and sensor ID
+   * @return the response from the sensor node, or an error message if the request fails
+   */
 
   String requestReading(ReadingRequest request) {
     String command = "GET_READING;" + request.nodeId() + ";" + request.sensorId();
@@ -54,21 +91,67 @@ final class NodeConnection {
         + ";TEMPERATURE;";
     return request(command, reply -> isTemperatureReading(expectedPrefix, reply));
   }
+  
+  /**
+   * Requests the list of devices from the sensor node.
+   *
+   * @param nodeId the ID of the sensor node
+   * @return the response from the sensor node, or an error message if the request fails
+   */
 
   String requestDevices(int nodeId) {
     return request("LIST_DEVICES;" + nodeId, reply ->
         reply.matches("DEVICES;" + nodeId + "(;(SENSOR|ACTUATOR):[0-9]+:[A-Z][A-Z0-9_]*)*"));
   }
+  
+  /**
+   * Requests the current state of an actuator from the sensor node.
+   *
+   * @param request the actuator request containing node ID and actuator ID
+   * @return the response from the sensor node, or an error message if the request fails
+   */
+  
+  String requestActuatorState(ActuatorRequest request) {
+    String onReply = heaterStateReply(request.nodeId(), request.actuatorId(), "ON");
+    String offReply = heaterStateReply(request.nodeId(), request.actuatorId(), "OFF");
+
+    String command;
+    command = "GET_ACTUATOR;" + request.nodeId() + ";" + request.actuatorId();
+    return request(command, reply -> reply.equals(onReply) || reply.equals(offReply));
+  }
+  
+  /**
+   * Requests the sensor node to turn on a heater.
+   *
+   * @param command the command containing node ID and heater ID
+   * @return the response from the sensor node, or an error message if the request fails
+   */
 
   String requestTurnOnHeater(TurnOnHeaterCommand command) {
     String expected = heaterStateReply(command.getNodeId(), command.getHeaterId(), "ON");
     return request(MessageEncoder.encodeTurnOnHeater(command), reply -> reply.equals(expected));
   }
+  
+  /**
+   * Requests the sensor node to turn off a heater.
+   *
+   * @param command the command containing node ID and heater ID
+   * @return the response from the sensor node, or an error message if the request fails
+   */
 
   String requestTurnOffHeater(TurnOffHeaterCommand command) {
     String expected = heaterStateReply(command.getNodeId(), command.getHeaterId(), "OFF");
     return request(MessageEncoder.encodeTurnOffHeater(command), reply -> reply.equals(expected));
   }
+  
+  /**
+   * Constructs a response message indicating the state of a heater.
+   *
+   * @param nodeId the ID of the sensor node
+   * @param heaterId the ID of the heater
+   * @param state the state of the heater ("ON" or "OFF")
+   * @return the constructed response message
+   */
 
   private static String heaterStateReply(int nodeId, int heaterId, String state) {
     return "ACTUATOR_STATE;" + nodeId + ";" + heaterId + ";HEATER;" + state;
@@ -99,6 +182,14 @@ final class NodeConnection {
       }
     }
   }
+  
+  /**
+   * Validates the reply received from the sensor node.
+   *
+   * @param reply the reply received from the sensor node
+   * @param isValidReply a predicate to check if the reply is valid
+   * @return the validated reply, or an error message if the reply is invalid
+   */
 
   private String validateReply(String reply, Predicate<String> isValidReply) {
     if (reply.equals("ERROR;TIMEOUT")) {
@@ -114,6 +205,14 @@ final class NodeConnection {
     closeConnection();
     return "ERROR;BAD_RESPONSE";
   }
+  
+  /**
+   * Checks if the reply from the sensor node is a valid temperature reading.
+   *
+   * @param expectedPrefix the expected prefix of the reply
+   * @param reply the reply received from the sensor node
+   * @return true if the reply is a valid temperature reading, false otherwise
+   */
 
   private static boolean isTemperatureReading(String expectedPrefix, String reply) {
     if (!reply.startsWith(expectedPrefix)) {
@@ -122,6 +221,10 @@ final class NodeConnection {
     String value = reply.substring(expectedPrefix.length());
     return value.matches("-?[0-9]+(\\.[0-9]+)?") && Double.isFinite(Double.parseDouble(value));
   }
+  
+  /**
+   * Closes the connection to the sensor node and marks it as disconnected.
+   */
 
   private void closeConnection() {
     markDisconnected();

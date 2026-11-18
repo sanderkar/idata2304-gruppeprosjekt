@@ -116,6 +116,24 @@ public class MessageDecoder {
    */
   public record ReadingRequest(int nodeId, int sensorId) {}
 
+  public record ActuatorRequest(int nodeId, int actuatorId) {}
+
+  /**
+   * Decodes a request for an actuator's current state.
+   *
+   * @param message the GET_ACTUATOR message to decode
+   * @return the requested node and actuator IDs
+   * @throws IllegalArgumentException if the format or either ID is invalid
+   */
+  public static ActuatorRequest decodeGetActuator(String message) {
+    String[] fields = message.split(";", -1);
+    if (fields.length != 3 || !fields[0].equals("GET_ACTUATOR")
+        || !fields[1].matches("[0-9]+") || !fields[2].matches("[0-9]+")) {
+      throw new IllegalArgumentException("Invalid GET_ACTUATOR message");
+    }
+    return new ActuatorRequest(Integer.parseInt(fields[1]), Integer.parseInt(fields[2]));
+  }
+
   /**
    * Represents a command to control an actuator.
    *
