@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -25,14 +26,24 @@ import java.util.concurrent.ConcurrentMap;
 public final class ServerApplication {
 
   private final ServerSocket serverSocket;
-  private final Properties panelUsers = new Properties();
+  private final Properties panelUsers;
+  private final Map<String, String> environment;
   private final ConcurrentMap<Integer, NodeConnection> nodes = new ConcurrentHashMap<>();
 
   public ServerApplication(int port) throws IOException {
+    this.panelUsers = new Properties();
+    this.environment = System.getenv();
     try (var reader = Files.newBufferedReader(Path.of("config/panel-users.properties"))) {
       panelUsers.load(reader);
     }
     this.serverSocket = new ServerSocket(port);
+  }
+
+  /** Supplies configuration and a socket for isolated tests  */
+  ServerApplication(ServerSocket serverSocket, Properties panelUsers, Map<String, String> environment) {
+    this.serverSocket = serverSocket;
+    this.panelUsers = panelUsers;
+    this.environment = environment;
   }
 
   /**
@@ -102,7 +113,7 @@ public final class ServerApplication {
     try {
       var registration = MessageDecoder.decodeNodeRegistration(message);
       nodeId = registration.getNodeId();
-      String expectedToken = System.getenv("SMART_HOME_NODE_" + nodeId + "_TOKEN");
+      String expectedToken = environment.get("SMART_HOME_NODE_" + nodeId + "_TOKEN");
       if (!registration.getToken().equals(expectedToken)) {
         Protocol.writeLine(writer, "ERROR;AUTH_FAILED");
         return;
@@ -140,7 +151,7 @@ public final class ServerApplication {
    * @throws IOException if an I/O error occurs during communication
    */
 
-  private void handlePanel(BufferedReader reader, OutputStreamWriter writer, String message)
+  void handlePanel(BufferedReader reader, OutputStreamWriter writer, String message)
       throws IOException {
     String[] fields = message.split(";", -1);
     if (fields.length != 4 || !fields[1].equals("1") || fields[3].isEmpty()) {
@@ -153,7 +164,7 @@ public final class ServerApplication {
     boolean knownUser = Arrays.stream(panelUsers.getProperty("users", "").split(","))
         .map(String::trim).anyMatch(userId::equals);
     if (!knownUser || !Set.of("SHA", "OWNER", "GUEST", "TECHNICIAN").contains(role)
-        || tokenVariable.isEmpty() || !fields[3].equals(System.getenv(tokenVariable))) {
+        || tokenVariable.isEmpty() || !fields[3].equals(environment.get(tokenVariable))) {
       Protocol.writeLine(writer, "ERROR;AUTH_FAILED");
       return;
     }
