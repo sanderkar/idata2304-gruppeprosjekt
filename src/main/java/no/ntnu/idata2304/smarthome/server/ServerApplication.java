@@ -77,6 +77,16 @@ public final class ServerApplication {
     }
   }
 
+  /**
+   * Handles the registration and communication with a connected sensor node.
+   *
+   * @param client the connected client socket
+   * @param reader the BufferedReader to read messages from the sensor node
+   * @param writer the OutputStreamWriter to send messages to the sensor node
+   * @param message the initial registration message from the sensor node
+   * @throws IOException if an I/O error occurs during communication
+   */
+
   private void handleNode(Socket client, BufferedReader reader, OutputStreamWriter writer,
                           String message) throws IOException {
     final int nodeId;
@@ -112,6 +122,15 @@ public final class ServerApplication {
     }
   }
 
+  /**
+   * Handles the registration and communication with a connected control panel.
+   *
+   * @param reader the BufferedReader to read messages from the control panel
+   * @param writer the OutputStreamWriter to send messages to the control panel
+   * @param message the initial registration message from the control panel
+   * @throws IOException if an I/O error occurs during communication
+   */
+
   private void handlePanel(BufferedReader reader, OutputStreamWriter writer, String message)
       throws IOException {
     String[] fields = message.split(";", -1);
@@ -132,6 +151,12 @@ public final class ServerApplication {
     }
   }
 
+  /**
+   * Responds to a request from the control panel.
+   *
+   * @param request the request message from the control panel
+   * @return the response message to send back to the control panel
+   */
   private String respondToPanel(String request) {
     if (request.equals("LIST_NODES")) {
       var response = new StringJoiner(";").add("NODES");
@@ -150,6 +175,11 @@ public final class ServerApplication {
           NodeConnection node = nodes.get(reading.nodeId());
           yield node == null ? "ERROR;NODE_UNAVAILABLE" : node.requestReading(reading);
         }
+        case "GET_ACTUATOR" -> {
+          var actuator = MessageDecoder.decodeGetActuator(request);
+          NodeConnection node = nodes.get(actuator.nodeId());
+          yield node == null ? "ERROR;NODE_UNAVAILABLE" : node.requestActuatorState(actuator);
+        }
         case "TURN_ON_HEATER" -> {
           var command = MessageDecoder.decodeTurnOnHeater(request);
           NodeConnection node = nodes.get(command.getNodeId());
@@ -167,6 +197,12 @@ public final class ServerApplication {
     }
   }
 
+  /**
+   * Lists the devices for a specific sensor node.
+   *
+   * @param nodeId the ID of the sensor node
+   * @return the response message containing the list of devices
+   */
   private String listDevices(int nodeId) {
     NodeConnection node = nodes.get(nodeId);
     return node == null ? "ERROR;NODE_UNAVAILABLE" : node.requestDevices(nodeId);
