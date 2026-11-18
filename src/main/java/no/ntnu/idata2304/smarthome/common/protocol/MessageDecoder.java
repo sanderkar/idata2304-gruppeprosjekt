@@ -52,6 +52,14 @@ public class MessageDecoder {
     return new NodeRegistration(nodeId, parts[3]);
   }
 
+  /**
+   * Decodes a string message into a ReadingRequest.
+   *
+   * @param message the string message to decode
+   * @return the decoded ReadingRequest
+   * @throws IllegalArgumentException if the message format is invalid
+   */
+
   public static ReadingRequest decodeGetReading(String message) {
     String[] fields = message.split(";", -1);
     if (fields.length != 3 || !fields[0].equals("GET_READING")
@@ -61,6 +69,13 @@ public class MessageDecoder {
     return new ReadingRequest(Integer.parseInt(fields[1]), Integer.parseInt(fields[2]));
   }
 
+  /**
+   * Decodes a string message into a ListDevicesRequest.
+   *
+   * @param message the string message to decode
+   * @return the decoded ListDevicesRequest
+   * @throws IllegalArgumentException if the message format is invalid
+   */
   public static int decodeListDevices(String message) {
     String[] fields = message.split(";", -1);
     if (fields.length != 2 || !fields[0].equals("LIST_DEVICES")
@@ -71,4 +86,19 @@ public class MessageDecoder {
   }
 
   public record ReadingRequest(int nodeId, int sensorId) {}
+
+  public record ActuatorCommand(int nodeId, int actuatorId, String state) {}
+
+  public static ActuatorCommand decodeActuator(String message) {
+    String[] fields = message.split(";", -1);
+    if (fields.length != 4 || !fields[0].equals("SET_ACTUATOR")
+        || !fields[1].matches("[0-9]+") || !fields[2].matches("[0-9]+")
+        || !fields[3].equals("ON") && !fields[3].equals("OFF")) {
+      throw new IllegalArgumentException("Invalid SET_ACTUATOR message");
+    }
+    return new ActuatorCommand(Integer.parseInt(fields[1]), Integer.parseInt(fields[2]), fields[3]);
+  }
+
+
 }
+
