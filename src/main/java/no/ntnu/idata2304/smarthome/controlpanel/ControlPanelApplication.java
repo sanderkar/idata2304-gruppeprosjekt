@@ -30,6 +30,7 @@ public final class ControlPanelApplication {
   private ControlPanelApplication() {}
 
   public static void main(String[] args) throws IOException {
+    String userId = args.length == 0 ? "owner-example" : args[0];
     String token = System.getenv().getOrDefault("SMART_HOME_PANEL_TOKEN", "panel-example");
     if (!token.matches("[A-Za-z0-9._-]{1,128}")) {
       System.err.println("Provide a valid control panel token.");
@@ -43,7 +44,7 @@ public final class ControlPanelApplication {
           new InputStreamReader(server.getInputStream(), StandardCharsets.UTF_8));
       var writer = new OutputStreamWriter(server.getOutputStream(), StandardCharsets.UTF_8);
 
-      Protocol.writeLine(writer, "HELLO_PANEL;1;owner-example;" + token);
+      Protocol.writeLine(writer, "HELLO_PANEL;1;" + userId + ";" + token);
       String registration = reader.readLine();
       if (!"READY;1".equals(registration)) {
         System.err.println("Panel registration failed: " + registration);
