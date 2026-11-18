@@ -1,6 +1,9 @@
 package no.ntnu.idata2304.smarthome.controlpanel;
 
+import no.ntnu.idata2304.smarthome.common.protocol.MessageEncoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
+import no.ntnu.idata2304.smarthome.common.protocol.TurnOffHeaterCommand;
+import no.ntnu.idata2304.smarthome.common.protocol.TurnOnHeaterCommand;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,6 +19,10 @@ import java.util.Scanner;
  */
 public final class ControlPanelApplication {
 
+  private static final String USAGE =
+      "Commands: list | read <node ID> <sensor ID> | on <node ID> <heater ID> "
+          + "| off <node ID> <heater ID> | exit";
+  private static final String ID = "[0-9]{1,9}";
 
   private ControlPanelApplication() {}
 
@@ -40,21 +47,18 @@ public final class ControlPanelApplication {
         return;
       }
 
-      System.out.println("Commands: list | read <node ID> <sensor ID> | exit");
+      System.out.println(USAGE);
       while (console.hasNextLine()) {
         String[] command = console.nextLine().trim().split("\\s+");
         if (command.length == 1 && command[0].equals("exit")) {
           return;
         }
-        if (command.length == 1 && command[0].equals("list")) {
-          Protocol.writeLine(writer, "LIST_NODES");
-        } else if (command.length == 3 && command[0].equals("read")
-            && command[1].matches("[0-9]+") && command[2].matches("[0-9]+")) {
-          Protocol.writeLine(writer, "GET_READING;" + command[1] + ";" + command[2]);
-        } else {
-          System.out.println("Use list, read <node ID> <sensor ID>, or exit.");
+        String request = toRequest(command);
+        if (request == null) {
+          System.out.println(USAGE);
           continue;
         }
+        Protocol.writeLine(writer, request);
 
         String response = reader.readLine();
         if (response == null) {
@@ -73,10 +77,36 @@ public final class ControlPanelApplication {
     }
   }
 
+  /**
+   * Translates a line typed by the user into a protocol message.
+   *
+   * @param command the typed command, split on whitespace
+   * @return the protocol message to send, or null if the command is not recognised
+   */
+  private static String toRequest(String[] command) {
+    if (command.length == 1 && command[0].equals("list")) {
+      return "LIST_NODES";
+    }
+    if (command.length != 3 || !command[1].matches(ID) || !command[2].matches(ID)) {
+      return null;
+    }
+    int nodeId = Integer.parseInt(command[1]);
+    int deviceId = Integer.parseInt(command[2]);
+    return switch (command[0]) {
+      case "read" -> "GET_READING;" + nodeId + ";" + deviceId;
+      case "on" -> MessageEncoder.encodeTurnOnHeater(new TurnOnHeaterCommand(nodeId, deviceId));
+      case "off" -> MessageEncoder.encodeTurnOffHeater(new TurnOffHeaterCommand(nodeId, deviceId));
+      default -> null;
+    };
+  }
+
   private static void showResponse(String response) {
     String[] fields = response.split(";", -1);
     if (fields.length == 5 && fields[0].equals("READING")) {
       System.out.println("Node " + fields[1] + ", sensor " + fields[2] + ": " + fields[4] + " °C");
+    } else if (fields.length == 5 && fields[0].equals("ACTUATOR_STATE")) {
+      System.out.println("Node " + fields[1] + ", actuator " + fields[2] + " (" + fields[3]
+          + "): " + fields[4]);
     } else if (response.equals("NODES")) {
       System.out.println("No connected sensor nodes.");
     } else {

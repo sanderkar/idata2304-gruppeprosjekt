@@ -150,6 +150,16 @@ public final class ServerApplication {
           NodeConnection node = nodes.get(reading.nodeId());
           yield node == null ? "ERROR;NODE_UNAVAILABLE" : node.requestReading(reading);
         }
+        case "TURN_ON_HEATER" -> {
+          var command = MessageDecoder.decodeTurnOnHeater(request);
+          NodeConnection node = nodes.get(command.getNodeId());
+          yield node == null ? "ERROR;NODE_UNAVAILABLE" : node.requestTurnOnHeater(command);
+        }
+        case "TURN_OFF_HEATER" -> {
+          var command = MessageDecoder.decodeTurnOffHeater(request);
+          NodeConnection node = nodes.get(command.getNodeId());
+          yield node == null ? "ERROR;NODE_UNAVAILABLE" : node.requestTurnOffHeater(command);
+        }
         default -> "ERROR;UNKNOWN_COMMAND";
       };
     } catch (IllegalArgumentException exception) {

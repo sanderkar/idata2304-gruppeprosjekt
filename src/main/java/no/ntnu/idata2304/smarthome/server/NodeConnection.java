@@ -1,7 +1,10 @@
 package no.ntnu.idata2304.smarthome.server;
 
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder.ReadingRequest;
+import no.ntnu.idata2304.smarthome.common.protocol.MessageEncoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
+import no.ntnu.idata2304.smarthome.common.protocol.TurnOffHeaterCommand;
+import no.ntnu.idata2304.smarthome.common.protocol.TurnOnHeaterCommand;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -57,6 +60,20 @@ final class NodeConnection {
         reply.matches("DEVICES;" + nodeId + "(;(SENSOR|ACTUATOR):[0-9]+:[A-Z][A-Z0-9_]*)*"));
   }
 
+  String requestTurnOnHeater(TurnOnHeaterCommand command) {
+    String expected = heaterStateReply(command.getNodeId(), command.getHeaterId(), "ON");
+    return request(MessageEncoder.encodeTurnOnHeater(command), reply -> reply.equals(expected));
+  }
+
+  String requestTurnOffHeater(TurnOffHeaterCommand command) {
+    String expected = heaterStateReply(command.getNodeId(), command.getHeaterId(), "OFF");
+    return request(MessageEncoder.encodeTurnOffHeater(command), reply -> reply.equals(expected));
+  }
+
+  private static String heaterStateReply(int nodeId, int heaterId, String state) {
+    return "ACTUATOR_STATE;" + nodeId + ";" + heaterId + ";HEATER;" + state;
+  }
+
   private String request(String command, Predicate<String> isValidReply) {
     var response = new CompletableFuture<String>();
     synchronized (this) {
@@ -89,7 +106,8 @@ final class NodeConnection {
       return reply;
     }
     if (reply.equals("ERROR;NODE_UNAVAILABLE") || reply.equals("ERROR;UNKNOWN_SENSOR")
-        || reply.equals("ERROR;WRONG_NODE") || isValidReply.test(reply)) {
+        || reply.equals("ERROR;UNKNOWN_ACTUATOR") || reply.equals("ERROR;WRONG_NODE")
+        || isValidReply.test(reply)) {
       return reply;
     }
 

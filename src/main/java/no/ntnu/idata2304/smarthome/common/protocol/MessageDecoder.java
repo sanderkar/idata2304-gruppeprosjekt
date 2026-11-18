@@ -12,13 +12,36 @@ public class MessageDecoder {
    * @throws IllegalArgumentException if the message format is invalid
    */
   public static TurnOnHeaterCommand decodeTurnOnHeater(String message) {
+    int[] ids = decodeHeaterCommandIds(message, "TURN_ON_HEATER");
+    return new TurnOnHeaterCommand(ids[0], ids[1]);
+  }
+
+  /**
+   * Decodes a string message into a TurnOffHeaterCommand.
+   *
+   * @param message the string message to decode
+   * @return the decoded TurnOffHeaterCommand
+   * @throws IllegalArgumentException if the message format is invalid
+   */
+  public static TurnOffHeaterCommand decodeTurnOffHeater(String message) {
+    int[] ids = decodeHeaterCommandIds(message, "TURN_OFF_HEATER");
+    return new TurnOffHeaterCommand(ids[0], ids[1]);
+  }
+
+  /**
+   * Parses "&lt;TYPE&gt;;nodeId;heaterId" and returns {nodeId, heaterId}.
+   *
+   * @param message the message to parse
+   * @param expectedType the command type the message must start with
+   * @return an array holding the node ID and the heater ID, in that order
+   * @throws IllegalArgumentException if the format is invalid or an ID is not a number
+   */
+  private static int[] decodeHeaterCommandIds(String message, String expectedType) {
     String[] parts = message.split(";", -1);
-    if (parts.length != 3 || !parts[0].equals("TURN_ON_HEATER")) {
-      throw new IllegalArgumentException("Invalid TURN_ON_HEATER command format");
+    if (parts.length != 3 || !parts[0].equals(expectedType)) {
+      throw new IllegalArgumentException("Invalid " + expectedType + " command format");
     }
-    int nodeId = Integer.parseInt(parts[1]);
-    int heaterId = Integer.parseInt(parts[2]);
-    return new TurnOnHeaterCommand(nodeId, heaterId);
+    return new int[] {Integer.parseInt(parts[1]), Integer.parseInt(parts[2])};
   }
 
   /**
