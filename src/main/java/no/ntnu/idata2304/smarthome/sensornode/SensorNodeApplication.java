@@ -82,6 +82,22 @@ public final class SensorNodeApplication {
             + ";ACTUATOR:" + heater.getHeaterId() + ":HEATER";
       }
 
+      if (command.split(";", 2)[0].equals("TURN_ON_HEATER")) {
+        var heaterCommand = MessageDecoder.decodeTurnOnHeater(command);
+
+        if (heaterCommand.getNodeId() != nodeId) {
+          return "ERROR;WRONG_NODE";
+        }
+
+        if (heaterCommand.getHeaterId() != heater.getHeaterId()) {
+          return "ERROR;UNKNOWN_ACTUATOR";
+        }
+
+        heater.turnOn();
+        return "ACTUATOR_STATE;" + nodeId + ";" + heater.getHeaterId()
+            + ";HEATER;" + (heater.isOn() ? "ON" : "OFF");
+      }
+
       var request = MessageDecoder.decodeGetReading(command);
       if (request.nodeId() != nodeId) {
         return "ERROR;WRONG_NODE";
