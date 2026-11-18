@@ -18,6 +18,7 @@ public class MessageEncoder {
   /**
    * Encodes a TurnOffHeaterCommand into a string message.
    *
+   * .
    * @param command the TurnOffHeaterCommand to encode
    * @return the encoded string message
    */
