@@ -168,4 +168,28 @@ public class MessageDecoderTest {
         () -> MessageDecoder.decodeNodeRegistration(message));
   }
 
+  @Test
+  public void decodesTurnOffHeaterCommandCorrectly() {
+    TurnOffHeaterCommand command = MessageDecoder.decodeTurnOffHeater("TURN_OFF_HEATER;12;3");
+    assertEquals(12, command.getNodeId());
+    assertEquals(3, command.getHeaterId());
+  }
+
+  @Test
+  public void turnOffDecoderRejectsTurnOnMessage() {
+    assertThrows(IllegalArgumentException.class,
+        () -> MessageDecoder.decodeTurnOffHeater("TURN_ON_HEATER;12;3"));
+  }
+
+  @Test
+  public void turnOnDecoderRejectsTurnOffMessage() {
+    assertThrows(IllegalArgumentException.class,
+        () -> MessageDecoder.decodeTurnOnHeater("TURN_OFF_HEATER;12;3"));
+  }
+
+  @Test
+  public void rejectsTurnOffHeaterWithMissingHeaterId() {
+    assertThrows(IllegalArgumentException.class,
+        () -> MessageDecoder.decodeTurnOffHeater("TURN_OFF_HEATER;12"));
+  }
 }

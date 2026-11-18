@@ -12,4 +12,11 @@ public class MessageEncoderTest {
     String encodedMessage = MessageEncoder.encodeTurnOnHeater(command);
     assertEquals("TURN_ON_HEATER;12;3", encodedMessage);
   }
+
+  @Test
+  public void encodesTurnOffHeaterCommandCorrectly() {
+    TurnOffHeaterCommand command = new TurnOffHeaterCommand(12, 3);
+    String encodedMessage = MessageEncoder.encodeTurnOffHeater(command);
+    assertEquals("TURN_OFF_HEATER;12;3", encodedMessage);
+  }
 }
