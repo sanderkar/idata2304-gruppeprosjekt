@@ -1,5 +1,6 @@
 package no.ntnu.idata2304.smarthome.controlpanel;
 
+import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageEncoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
 import no.ntnu.idata2304.smarthome.common.protocol.TurnOffHeaterCommand;
@@ -31,9 +32,15 @@ public final class ControlPanelApplication {
 
   public static void main(String[] args) throws IOException {
     String userId = args.length == 0 ? "owner-example" : args[0];
-    String token = System.getenv().getOrDefault("SMART_HOME_PANEL_TOKEN", "panel-example");
-    if (!token.matches("[A-Za-z0-9._-]{1,128}")) {
-      System.err.println("Provide a valid control panel token.");
+    String tokenName = LocalConfiguration.loadPanelUsers().getProperty(userId + ".token-env");
+    if (tokenName == null || tokenName.isEmpty()) {
+      System.err.println("Unknown panel user. Check config/panel-users.properties.");
+      return;
+    }
+    String token = LocalConfiguration.loadCredentials().get(tokenName);
+    if (token == null || !token.matches("[A-Za-z0-9._-]{1,128}")) {
+      System.err.println("Set " + tokenName
+          + " in config/local.properties or the environment. See docs/running.md.");
       return;
     }
 
@@ -48,6 +55,10 @@ public final class ControlPanelApplication {
       String registration = reader.readLine();
       if (!"READY;1".equals(registration)) {
         System.err.println("Panel registration failed: " + registration);
+        if ("ERROR;AUTH_FAILED".equals(registration)) {
+          System.err.println("Check that " + tokenName
+              + " matches the server configuration, then restart the server. See docs/running.md.");
+        }
         return;
       }
 

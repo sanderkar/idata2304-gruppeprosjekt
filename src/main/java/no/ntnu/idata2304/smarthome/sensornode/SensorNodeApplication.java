@@ -1,5 +1,6 @@
 package no.ntnu.idata2304.smarthome.sensornode;
 
+import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Heater;
@@ -32,14 +33,13 @@ public final class SensorNodeApplication {
    */
 
 
-  public static void main(String[] args) throws IOException {
+   static void main(String[] args) throws IOException {
     int nodeId = args.length == 0 ? 12 : Integer.parseInt(args[0]);
-    String token = System.getenv("SMART_HOME_NODE_" + nodeId + "_TOKEN");
-    if (nodeId == 12 && token == null) {
-      token = "node-example";
-    }
+    String tokenName = "SMART_HOME_NODE_" + nodeId + "_TOKEN";
+    String token = LocalConfiguration.loadCredentials().get(tokenName);
     if (nodeId < 0 || token == null || !token.matches("[A-Za-z0-9._-]{1,128}")) {
-      System.err.println("Provide a non-negative node ID and a valid node token.");
+      System.err.println("Provide a non-negative node ID and set " + tokenName
+          + " in config/local.properties or the environment. See docs/running.md.");
       return;
     }
 
@@ -54,7 +54,8 @@ public final class SensorNodeApplication {
       System.out.println("Received response from server: " + response);
 
       if (!"READY;1".equals(response)) {
-        System.err.println("Unexpected response from server. Exiting.");
+        System.err.println("Node registration failed. Check that " + tokenName
+            + " matches the server configuration, then restart the server. See docs/running.md.");
         return;
       }
 

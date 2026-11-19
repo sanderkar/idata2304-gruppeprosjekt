@@ -1,0 +1,12 @@
+# Copy this file to config/local.properties once and replace the placeholder values.
+# All applications read the local file. Environment variables override its values.
+# Tokens must use 1-128 letters, digits, dots, underscores or hyphens.
+# This is only used an example, and the application does not actually run any of this code.
+# It is mostly there just to help with setup.
+
+
+SMART_HOME_NODE_12_TOKEN=replace-with-node-token
+SMART_HOME_PANEL_TOKEN=replace-with-owner-token
+SMART_HOME_SHA_TOKEN=replace-with-sha-token
+SMART_HOME_GUEST_TOKEN=replace-with-guest-token
+SMART_HOME_TECHNICIAN_TOKEN=replace-with-technician-token
