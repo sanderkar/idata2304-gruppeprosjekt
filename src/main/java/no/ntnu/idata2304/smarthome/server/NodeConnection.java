@@ -16,7 +16,7 @@ import java.util.function.Predicate;
 
 /**
  * Coordinates requests from panel threads with replies read by the node's connection thread.
- * Code Assisted by an AI.
+ * Code was assisted using AI and reviewed by the team members.
  */
 final class NodeConnection {
   private final Socket socket;
