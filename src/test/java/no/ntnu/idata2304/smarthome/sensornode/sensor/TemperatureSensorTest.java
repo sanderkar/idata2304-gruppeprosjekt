@@ -11,27 +11,27 @@ public class TemperatureSensorTest {
 
   public void idSavesAndReturnsCorrectly() {
     TemperatureSensor sensor = new TemperatureSensor(1, 25.0);
-    assertEquals(1, sensor.getTempSensorId());
+    assertEquals(1, sensor.getSensorId());
   }
 
   @Test
   public void temperatureSavesAndReturnsCorrectly() {
     TemperatureSensor sensor = new TemperatureSensor(1, 25.0);
-    assertEquals(25.0, sensor.getTemperature());
+    assertEquals(25.0, sensor.getValue());
   }
 
   @Test
   public void temperatureCanBeUpdated() {
     TemperatureSensor sensor = new TemperatureSensor(1, 25.0);
-    sensor.setTemperature(30.0);
-    assertEquals(30.0, sensor.getTemperature());
+    sensor.setValue(30.0);
+    assertEquals(30.0, sensor.getValue());
   }
 
   @Test
   public void simulatedTemperatureStaysWithinExpectedRange() {
     TemperatureSensor sensor = new TemperatureSensor(1, 25.0);
-    sensor.simulateTemperatureChange();
-    assertTrue(sensor.getTemperature() >= 24.5 && sensor.getTemperature() <= 25.5);
+    sensor.simulateChange();
+    assertTrue(sensor.getValue() >= 24.5 && sensor.getValue() <= 25.5);
   }
 
 

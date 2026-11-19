@@ -4,7 +4,7 @@ import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Heater;
-import no.ntnu.idata2304.smarthome.sensornode.sensor.TemperatureSensor;
+import no.ntnu.idata2304.smarthome.sensornode.sensor.SensorFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -13,6 +13,7 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.StringJoiner;
 
 /**
  * Entry point for the sensor node application.
@@ -60,28 +61,31 @@ public final class SensorNodeApplication {
       }
 
       var node = new SensorNode(nodeId);
-      var sensor = new TemperatureSensor(1, 22.0);
       var heater = new Heater(1);
 
-      node.addTemperatureSensor(sensor);
+      node.addSensor(SensorFactory.create("TEMPERATURE", 1, 22.0));
+      node.addSensor(SensorFactory.create("HUMIDITY", 2, 50.0));
       node.addHeater(heater);
       String command;
       while ((command = reader.readLine()) != null) {
-        Protocol.writeLine(writer, respondToCommand(command, nodeId, sensor, heater));
+        Protocol.writeLine(writer, respondToCommand(command, node, heater));
       }
     }
   }
 
-  static String respondToCommand(String command, int nodeId, TemperatureSensor sensor, Heater heater) {
+  static String respondToCommand(String command, SensorNode node, Heater heater) {
+    int nodeId = node.getNodeId();
     try {
       switch (command.split(";", 2)[0]) {
         case "LIST_DEVICES" -> {
           if (MessageDecoder.decodeListDevices(command) != nodeId) {
             return "ERROR;WRONG_NODE";
           }
-          return "DEVICES;" + nodeId
-              + ";SENSOR:" + sensor.getTempSensorId() + ":TEMPERATURE"
-              + ";ACTUATOR:" + heater.getHeaterId() + ":HEATER";
+          var devices = new StringJoiner(";").add("DEVICES").add(Integer.toString(nodeId));
+          for (var sensor : node.getSensors()) {
+            devices.add("SENSOR:" + sensor.getSensorId() + ":" + sensor.getType());
+          }
+          return devices.add("ACTUATOR:" + heater.getHeaterId() + ":HEATER").toString();
         }
         case "TURN_ON_HEATER" -> {
           var heaterCommand = MessageDecoder.decodeTurnOnHeater(command);
@@ -131,13 +135,14 @@ public final class SensorNodeApplication {
       if (request.nodeId() != nodeId) {
         return "ERROR;WRONG_NODE";
       }
-      if (request.sensorId() != sensor.getTempSensorId()) {
+      var sensor = node.findSensor(request.sensorId());
+      if (sensor == null) {
         return "ERROR;UNKNOWN_SENSOR";
       }
 
-      sensor.simulateTemperatureChange();
-      String temperature = String.format(Locale.ROOT, "%.2f", sensor.getTemperature());
-      return "READING;" + nodeId + ";" + sensor.getTempSensorId() + ";TEMPERATURE;" + temperature;
+      sensor.simulateChange();
+      String value = String.format(Locale.ROOT, "%.2f", sensor.getValue());
+      return "READING;" + nodeId + ";" + sensor.getSensorId() + ";" + sensor.getType() + ";" + value;
     } catch (IllegalArgumentException exception) {
       return "ERROR;BAD_FORMAT";
     }

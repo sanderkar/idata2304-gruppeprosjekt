@@ -1,6 +1,7 @@
 package no.ntnu.idata2304.smarthome.controlpanel;
 
 import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
+import no.ntnu.idata2304.smarthome.common.model.SensorType;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageEncoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
 import no.ntnu.idata2304.smarthome.common.protocol.TurnOffHeaterCommand;
@@ -125,7 +126,8 @@ public final class ControlPanelApplication {
   private static void showResponse(String response) {
     String[] fields = response.split(";", -1);
     if (fields.length == 5 && fields[0].equals("READING")) {
-      System.out.println("Node " + fields[1] + ", sensor " + fields[2] + ": " + fields[4] + " °C");
+      System.out.println("Node " + fields[1] + ", sensor " + fields[2] + ": " + fields[4]
+          + " " + SensorType.valueOf(fields[3]).getUnit());
     } else if (fields.length == 5 && fields[0].equals("ACTUATOR_STATE")) {
       System.out.println("Node " + fields[1] + ", actuator " + fields[2] + " (" + fields[3]
           + "): " + fields[4]);
