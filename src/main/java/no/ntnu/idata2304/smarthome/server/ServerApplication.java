@@ -1,5 +1,6 @@
 package no.ntnu.idata2304.smarthome.server;
 
+import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
 
@@ -10,8 +11,6 @@ import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Properties;
@@ -27,15 +26,12 @@ public final class ServerApplication {
 
   private final ServerSocket serverSocket;
   private final Properties panelUsers;
-  private final Map<String, String> environment;
+  private final Map<String, String> credentials;
   private final ConcurrentMap<Integer, NodeConnection> nodes = new ConcurrentHashMap<>();
 
   public ServerApplication(int port) throws IOException {
-    this.panelUsers = new Properties();
-    this.environment = System.getenv();
-    try (var reader = Files.newBufferedReader(Path.of("config/panel-users.properties"))) {
-      panelUsers.load(reader);
-    }
+    this.panelUsers = LocalConfiguration.loadPanelUsers();
+    this.credentials = LocalConfiguration.loadCredentials();
     this.serverSocket = new ServerSocket(port);
   }
 
@@ -43,7 +39,7 @@ public final class ServerApplication {
   ServerApplication(ServerSocket serverSocket, Properties panelUsers, Map<String, String> environment) {
     this.serverSocket = serverSocket;
     this.panelUsers = panelUsers;
-    this.environment = environment;
+    this.credentials = environment;
   }
 
   /**
@@ -53,7 +49,7 @@ public final class ServerApplication {
    * @throws IOException if an I/O error occurs when opening the socket
    */
 
-  public static void main(String[] args) throws IOException {
+   static void main(String[] args) throws IOException {
     ServerApplication server = new ServerApplication(5000);
     System.out.println("Server started on port 5000. Waiting for clients to connect...");
 
@@ -113,7 +109,7 @@ public final class ServerApplication {
     try {
       var registration = MessageDecoder.decodeNodeRegistration(message);
       nodeId = registration.getNodeId();
-      String expectedToken = environment.get("SMART_HOME_NODE_" + nodeId + "_TOKEN");
+      String expectedToken = credentials.get("SMART_HOME_NODE_" + nodeId + "_TOKEN");
       if (!registration.getToken().equals(expectedToken)) {
         Protocol.writeLine(writer, "ERROR;AUTH_FAILED");
         return;
@@ -134,7 +130,7 @@ public final class ServerApplication {
       System.out.println("Registered node " + nodeId);
       String response;
       while ((response = reader.readLine()) != null && node.receiveResponse(response)) {
-        // The panel thread waiting for this response handles the result.
+        // The panel thread waiting for this response handles the result
       }
     } finally {
       nodes.remove(nodeId, node);
@@ -164,7 +160,7 @@ public final class ServerApplication {
     boolean knownUser = Arrays.stream(panelUsers.getProperty("users", "").split(","))
         .map(String::trim).anyMatch(userId::equals);
     if (!knownUser || !Set.of("SHA", "OWNER", "GUEST", "TECHNICIAN").contains(role)
-        || tokenVariable.isEmpty() || !fields[3].equals(environment.get(tokenVariable))) {
+        || tokenVariable.isEmpty() || !fields[3].equals(credentials.get(tokenVariable))) {
       Protocol.writeLine(writer, "ERROR;AUTH_FAILED");
       return;
     }
