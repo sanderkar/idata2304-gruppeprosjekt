@@ -97,7 +97,7 @@ public class MessageDecoderTest {
 
   /**
    * Tests GET_READING, LIST_DEVICES, and node registration validation.
-   * Code generated with AI assistance and reviewed by the author.
+   * Code made using AI assistance and reviewed by the team members
    */
   @Test
   public void decodesGetReadingCorrectly() {
