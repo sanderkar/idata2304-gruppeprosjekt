@@ -1,6 +1,7 @@
 package no.ntnu.idata2304.smarthome.server;
 
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder.ActuatorRequest;
+import no.ntnu.idata2304.smarthome.common.model.SensorType;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder.ReadingRequest;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageEncoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
@@ -79,7 +80,7 @@ final class NodeConnection {
   }
   
   /**
-   * Requests a temperature reading from the sensor node.
+   * Requests a sensor reading from the sensor node.
    *
    * @param request the reading request containing node ID and sensor ID
    * @return the response from the sensor node, or an error message if the request fails
@@ -88,8 +89,8 @@ final class NodeConnection {
   String requestReading(ReadingRequest request) {
     String command = "GET_READING;" + request.nodeId() + ";" + request.sensorId();
     String expectedPrefix = "READING;" + request.nodeId() + ";" + request.sensorId()
-        + ";TEMPERATURE;";
-    return request(command, reply -> isTemperatureReading(expectedPrefix, reply));
+        + ";";
+    return request(command, reply -> isSensorReading(expectedPrefix, reply));
   }
   
   /**
@@ -207,19 +208,26 @@ final class NodeConnection {
   }
   
   /**
-   * Checks if the reply from the sensor node is a valid temperature reading.
+   * Checks if the reply from the sensor node is a valid sensor reading.
    *
    * @param expectedPrefix the expected prefix of the reply
    * @param reply the reply received from the sensor node
-   * @return true if the reply is a valid temperature reading, false otherwise
+   * @return true if the reply is a valid sensor reading, false otherwise
    */
 
-  private static boolean isTemperatureReading(String expectedPrefix, String reply) {
+  private static boolean isSensorReading(String expectedPrefix, String reply) {
     if (!reply.startsWith(expectedPrefix)) {
       return false;
     }
-    String value = reply.substring(expectedPrefix.length());
-    return value.matches("-?[0-9]+(\\.[0-9]+)?") && Double.isFinite(Double.parseDouble(value));
+    String[] fields = reply.substring(expectedPrefix.length()).split(";", -1);
+    if (fields.length != 2 || !fields[1].matches("-?[0-9]+(\\.[0-9]+)?")) {
+      return false;
+    }
+    try {
+      return SensorType.valueOf(fields[0]).isValid(Double.parseDouble(fields[1]));
+    } catch (IllegalArgumentException exception) {
+      return false;
+    }
   }
   
   /**

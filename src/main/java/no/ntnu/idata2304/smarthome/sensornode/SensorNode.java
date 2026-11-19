@@ -3,7 +3,7 @@ package no.ntnu.idata2304.smarthome.sensornode;
 import no.ntnu.idata2304.smarthome.common.protocol.TurnOnHeaterCommand;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Actuator;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Heater;
-import no.ntnu.idata2304.smarthome.sensornode.sensor.TemperatureSensor;
+import no.ntnu.idata2304.smarthome.sensornode.sensor.Sensor;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +15,7 @@ public class SensorNode {
 
   private final int nodeId;
   private final List<Actuator> actuators;
-  private final List<TemperatureSensor> temperatureSensors;
+  private final List<Sensor> sensors;
 
   /**
    * Constructs a SensorNode with the specified node ID.
@@ -31,7 +31,7 @@ public class SensorNode {
 
 
     this.nodeId = nodeId;
-    this.temperatureSensors = new ArrayList<>();
+    this.sensors = new ArrayList<>();
     this.actuators = new ArrayList<>();
   }
 
@@ -88,38 +88,43 @@ public class SensorNode {
 
 
   /**
-   * Adds a temperature sensor to the sensor node.
+   * Adds a sensor to the sensor node.
    *
-   * @param sensor the temperature sensor to add
-   * @throws IllegalArgumentException if a temperature sensor with the same ID already exists
+   * @param sensor the sensor to add
+   * @throws IllegalArgumentException if a sensor with the same ID already exists
    */
 
-  public void addTemperatureSensor(TemperatureSensor sensor) {
-    for (TemperatureSensor existingSensor : temperatureSensors) {
-      if (existingSensor.getTempSensorId() == sensor.getTempSensorId()) {
-        throw new IllegalArgumentException("Temperature sensor with ID " + sensor.getTempSensorId() + " already exists.");
+  public void addSensor(Sensor sensor) {
+    for (Sensor existingSensor : sensors) {
+      if (existingSensor.getSensorId() == sensor.getSensorId()) {
+        throw new IllegalArgumentException("Sensor with ID " + sensor.getSensorId() + " already exists.");
       }
     }
-    temperatureSensors.add(sensor);
+    sensors.add(sensor);
   }
 
   /**
-   * Returns a list of all temperature sensors associated with the sensor node.
+   * Returns a list of all sensors associated with the sensor node.
    *
-   * @return a list of temperature sensors
+   * @return a list of sensors
    */
 
-  public List<TemperatureSensor> getTemperatureSensors() {
-    return List.copyOf(temperatureSensors);
+  public List<Sensor> getSensors() {
+    return List.copyOf(sensors);
+  }
+
+  public Sensor findSensor(int sensorId) {
+    return sensors.stream().filter(sensor -> sensor.getSensorId() == sensorId)
+        .findFirst().orElse(null);
   }
 
   /**
-   * Updates the temperature readings of all associated temperature sensors.
+   * Updates the readings of all associated sensors.
    */
 
-  public void updateTemperatureSensors() {
-    for (TemperatureSensor sensor : temperatureSensors) {
-      sensor.simulateTemperatureChange();
+  public void updateSensors() {
+    for (Sensor sensor : sensors) {
+      sensor.simulateChange();
     }
   }
 
