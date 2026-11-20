@@ -41,7 +41,15 @@ public class MessageDecoder {
     if (parts.length != 3 || !parts[0].equals(expectedType)) {
       throw new IllegalArgumentException("Invalid " + expectedType + " command format");
     }
-    return new int[] {Integer.parseInt(parts[1]), Integer.parseInt(parts[2])};
+    int nodeId = Integer.parseInt(parts[1]);
+    int heaterId = Integer.parseInt(parts[2]);
+
+    if (nodeId < 0 || heaterId < 0) {
+      throw new IllegalArgumentException(
+          "Node ID and heater ID cannot be negative");
+    }
+
+    return new int[] {nodeId, heaterId};
   }
 
   /**
@@ -160,6 +168,4 @@ public class MessageDecoder {
     return new ActuatorCommand(Integer.parseInt(fields[1]), Integer.parseInt(fields[2]), fields[3]);
   }
 
-
 }
-
