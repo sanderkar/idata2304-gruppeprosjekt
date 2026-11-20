@@ -192,4 +192,31 @@ public class MessageDecoderTest {
     assertThrows(IllegalArgumentException.class,
         () -> MessageDecoder.decodeTurnOffHeater("TURN_OFF_HEATER;12"));
   }
+  @Test
+  public void rejectsNegativeNodeIdForTurnOnHeater() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> MessageDecoder.decodeTurnOnHeater("TURN_ON_HEATER;-12;1"));
+  }
+
+  @Test
+  public void rejectsNegativeHeaterIdForTurnOnHeater() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> MessageDecoder.decodeTurnOnHeater("TURN_ON_HEATER;12;-1"));
+  }
+
+  @Test
+  public void rejectsNegativeNodeIdForTurnOffHeater() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> MessageDecoder.decodeTurnOffHeater("TURN_OFF_HEATER;-12;1"));
+  }
+
+  @Test
+  public void rejectsNegativeHeaterIdForTurnOffHeater() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> MessageDecoder.decodeTurnOffHeater("TURN_OFF_HEATER;12;-1"));
+  }
 }
