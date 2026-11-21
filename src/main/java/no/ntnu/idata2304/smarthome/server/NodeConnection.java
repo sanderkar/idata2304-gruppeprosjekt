@@ -144,7 +144,23 @@ final class NodeConnection {
     String expected = heaterStateReply(command.getNodeId(), command.getHeaterId(), "OFF");
     return request(MessageEncoder.encodeTurnOffHeater(command), reply -> reply.equals(expected));
   }
-  
+
+  /**
+   * Requests a new state for any actuator on this sensor node.
+   *
+   * @param nodeId the sensor node ID
+   * @param actuatorId the actuator ID
+   * @param state the requested state, ON or OFF
+   * @return the response from the sensor node
+   */
+  String requestSetActuator(int nodeId, int actuatorId, String state) {
+    String command = "SET_ACTUATOR;" + nodeId + ";" + actuatorId + ";" + state;
+    String expectedStart = "ACTUATOR_STATE;" + nodeId + ";" + actuatorId + ";";
+
+    return request(command, reply ->
+        reply.startsWith(expectedStart) && reply.endsWith(";" + state));
+  }
+
   /**
    * Constructs a response message indicating the state of a heater.
    *
