@@ -24,7 +24,11 @@ Protokollen bruker TCP. TCP leverer en ordnet strøm av byte, slik at applikasjo
 
 ## 4. Portnummer
 
-Standardporten er TCP `5000`. Serverens lytteadresse og port skal kunne konfigureres. Klientene konfigureres med serverens vertsnavn eller IP-adresse og samme port. På én maskin brukes `127.0.0.1`. Ved testing på flere maskiner brukes en tilgjengelig adresse på et avgrenset lokalnett. En annen port kan velges dersom 5000 er opptatt.
+Standardporten er TCP `5000`. Lytteadressen konfigureres med
+`SMART_HOME_HOST`, og porten konfigureres med `SMART_HOME_PORT`, enten i
+`config/local.properties` eller som miljøvariabler. Standardverdiene er
+`127.0.0.1` og `5000`. Serveren, sensornodene og kontrollpanelene bruker den
+samme konfigurasjonen.
 
 ## 5. Arkitektur
 

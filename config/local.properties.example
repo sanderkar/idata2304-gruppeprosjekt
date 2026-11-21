@@ -4,7 +4,8 @@
 # This is only used an example, and the application does not actually run any of this code.
 # It is mostly there just to help with setup.
 
-
+SMART_HOME_HOST=127.0.0.1
+SMART_HOME_PORT=5000
 SMART_HOME_NODE_12_TOKEN=replace-with-node-token
 SMART_HOME_PANEL_TOKEN=replace-with-owner-token
 SMART_HOME_SHA_TOKEN=replace-with-sha-token

@@ -14,6 +14,11 @@ Environment variables override values in the file. Remove old token environment
 variables from your IntelliJ run configurations when switching to the local file;
 otherwise different overrides can cause authentication failures.
 
+The server address is configured with `SMART_HOME_HOST` and `SMART_HOME_PORT`.
+The defaults are `127.0.0.1` and `5000`. Set the same values for the server,
+sensor nodes and control panels. When running on different machines, use the
+server machine's reachable IP address instead of `127.0.0.1`.
+
 ## Start the applications
 
 Run these main classes in this order, keeping the first two running:
@@ -23,7 +28,7 @@ Run these main classes in this order, keeping the first two running:
 3. `no.ntnu.idata2304.smarthome.controlpanel.ControlPanelApplication`
 
 The default node is `12`, with temperature sensor `1` and heater `1`. The default
-panel user is `owner-example`. The applications communicate on `127.0.0.1:5000`.
+panel user is `owner-example`. By default, the applications communicate on `127.0.0.1:5000`.
 The node should receive `READY;1`; the panel should display its command menu.
 
 Try these commands in the control panel:

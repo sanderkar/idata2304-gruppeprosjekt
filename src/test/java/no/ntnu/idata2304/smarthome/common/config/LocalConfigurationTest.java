@@ -44,4 +44,28 @@ class LocalConfigurationTest {
     assertThrows(java.io.IOException.class,
         () -> LocalConfiguration.loadCredentials(directory, Map.of()));
   }
+  @Test
+  void usesDefaultServerAddressWhenConfigurationIsMissing() {
+    var address = LocalConfiguration.loadServerAddress(Map.of());
+
+    assertEquals("127.0.0.1", address.host());
+    assertEquals(5000, address.port());
+  }
+
+  @Test
+  void loadsConfiguredServerAddress() {
+    var address = LocalConfiguration.loadServerAddress(Map.of(
+        "SMART_HOME_HOST", "192.168.1.20",
+        "SMART_HOME_PORT", "6000"));
+
+    assertEquals("192.168.1.20", address.host());
+    assertEquals(6000, address.port());
+  }
+
+  @Test
+  void rejectsInvalidServerPort() {
+    assertThrows(IllegalArgumentException.class,
+        () -> LocalConfiguration.loadServerAddress(Map.of(
+            "SMART_HOME_PORT", "not-a-number")));
+  }
 }

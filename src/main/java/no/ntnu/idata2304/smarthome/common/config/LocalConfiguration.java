@@ -11,6 +11,34 @@ import java.util.Properties;
  */
 public final class LocalConfiguration {
   private LocalConfiguration() {}
+  public record ServerAddress(String host, int port) {}
+
+  public static ServerAddress loadServerAddress() throws IOException {
+    return loadServerAddress(loadCredentials());
+  }
+
+  static ServerAddress loadServerAddress(Map<String, String> configuration) {
+    String host = configuration.getOrDefault("SMART_HOME_HOST", "127.0.0.1");
+    String portValue = configuration.getOrDefault("SMART_HOME_PORT", "5000");
+
+    if (host.isBlank()) {
+      throw new IllegalArgumentException("Server host cannot be blank");
+    }
+
+    final int port;
+    try {
+      port = Integer.parseInt(portValue);
+    } catch (NumberFormatException exception) {
+      throw new IllegalArgumentException("Server port must be a number", exception);
+    }
+
+    if (port < 1 || port > 65535) {
+      throw new IllegalArgumentException(
+          "Server port must be between 1 and 65535");
+    }
+
+    return new ServerAddress(host, port);
+  }
 
   public static Map<String, String> loadCredentials() throws IOException {
     return loadCredentials(Path.of("config/local.properties"), System.getenv());
