@@ -217,6 +217,20 @@ public final class ServerApplication {
           NodeConnection node = nodes.get(actuator.nodeId());
           yield node == null ? "ERROR;NODE_UNAVAILABLE" : node.requestActuatorState(actuator);
         }
+        case "SET_ACTUATOR" -> {
+          var command = MessageDecoder.decodeActuator(request);
+
+          if (!canAccess(userId, "actuators",
+              command.nodeId(), command.actuatorId(), true)) {
+            yield "ERROR;FORBIDDEN";
+          }
+
+          NodeConnection node = nodes.get(command.nodeId());
+          yield node == null
+              ? "ERROR;NODE_UNAVAILABLE"
+              : node.requestSetActuator(
+              command.nodeId(), command.actuatorId(), command.state());
+        }
         case "TURN_ON_HEATER" -> {
           var command = MessageDecoder.decodeTurnOnHeater(request);
           if (!canAccess(userId, "actuators", command.getNodeId(), command.getHeaterId(), true)) {

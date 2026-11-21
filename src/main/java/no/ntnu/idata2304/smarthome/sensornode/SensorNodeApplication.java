@@ -5,6 +5,7 @@ import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Heater;
 import no.ntnu.idata2304.smarthome.sensornode.sensor.SensorFactory;
+import no.ntnu.idata2304.smarthome.sensornode.actuator.Fan;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -63,10 +64,12 @@ public final class SensorNodeApplication {
 
       var node = new SensorNode(nodeId);
       var heater = new Heater(1);
+      var fan = new Fan(2);
 
       node.addSensor(SensorFactory.create("TEMPERATURE", 1, 22.0));
       node.addSensor(SensorFactory.create("HUMIDITY", 2, 50.0));
       node.addHeater(heater);
+      node.addActuator(fan);
       String command;
       while ((command = reader.readLine()) != null) {
         Protocol.writeLine(writer, respondToCommand(command, node, heater));
@@ -86,7 +89,34 @@ public final class SensorNodeApplication {
           for (var sensor : node.getSensors()) {
             devices.add("SENSOR:" + sensor.getSensorId() + ":" + sensor.getType());
           }
-          return devices.add("ACTUATOR:" + heater.getHeaterId() + ":HEATER").toString();
+          for (var actuator : node.getActuators()) {
+            devices.add("ACTUATOR:" + actuator.getActuatorId()
+                + ":" + actuator.getType());
+          }
+          return devices.toString();
+        }
+        case "SET_ACTUATOR" -> {
+          var actuatorCommand = MessageDecoder.decodeActuator(command);
+
+          if (actuatorCommand.nodeId() != nodeId) {
+            return "ERROR;WRONG_NODE";
+          }
+
+          var actuator = node.findActuator(actuatorCommand.actuatorId());
+          if (actuator == null) {
+            return "ERROR;UNKNOWN_ACTUATOR";
+          }
+
+          if (actuatorCommand.state().equals("ON")) {
+            node.turnOnActuator(actuatorCommand.actuatorId());
+          } else {
+            node.turnOffActuator(actuatorCommand.actuatorId());
+          }
+
+          return "ACTUATOR_STATE;" + nodeId
+              + ";" + actuator.getActuatorId()
+              + ";" + actuator.getType()
+              + ";" + (actuator.isOn() ? "ON" : "OFF");
         }
         case "TURN_ON_HEATER" -> {
           var heaterCommand = MessageDecoder.decodeTurnOnHeater(command);
