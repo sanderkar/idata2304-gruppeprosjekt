@@ -127,8 +127,22 @@ public final class ControlPanelApplication {
   private static void showResponse(String response) {
     String[] fields = response.split(";", -1);
     if (fields.length == 5 && fields[0].equals("READING")) {
-      System.out.println("Node " + fields[1] + ", sensor " + fields[2] + ": " + fields[4]
-          + " " + SensorType.valueOf(fields[3]).getUnit());
+      SensorType sensorType = SensorType.valueOf(fields[3]);
+      double value = Double.parseDouble(fields[4]);
+
+      System.out.println("Node " + fields[1] + ", sensor " + fields[2] + ": "
+          + value + " " + sensorType.getUnit());
+
+      if (sensorType == SensorType.TEMPERATURE
+          && AnomalyDetector.isTemperatureColdAnomaly(value)) {
+        System.out.println("WARNING: Unusually cold temperature.");
+      } else if (sensorType == SensorType.TEMPERATURE
+          && AnomalyDetector.isTemperatureHotAnomaly(value)) {
+        System.out.println("WARNING: Unusually hot temperature.");
+      } else if (sensorType == SensorType.HUMIDITY
+          && AnomalyDetector.isHumidityHighAnomaly(value)) {
+        System.out.println("WARNING: Unusually high humidity.");
+      }
     } else if (fields.length == 5 && fields[0].equals("ACTUATOR_STATE")) {
       System.out.println("Node " + fields[1] + ", actuator " + fields[2] + " (" + fields[3]
           + "): " + fields[4]);
