@@ -44,7 +44,8 @@ public final class SensorNodeApplication {
       return;
     }
 
-    try (Socket server = new Socket("127.0.0.1", 5000)) {
+    var serverAddress = LocalConfiguration.loadServerAddress();
+    try (Socket server = new Socket(serverAddress.host(), serverAddress.port())) {
       System.out.println("Connected to server at " + server.getInetAddress().getHostAddress() + ":" + server.getPort());
       var writer = new OutputStreamWriter(server.getOutputStream(), StandardCharsets.UTF_8);
       Protocol.writeLine(writer, "HELLO_NODE;1;" + nodeId + ";" + token);

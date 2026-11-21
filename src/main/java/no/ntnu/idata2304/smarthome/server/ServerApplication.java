@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -30,9 +31,14 @@ public final class ServerApplication {
   private final ConcurrentMap<Integer, NodeConnection> nodes = new ConcurrentHashMap<>();
 
   public ServerApplication(int port) throws IOException {
+    this("0.0.0.0", port);
+  }
+
+  public ServerApplication(String host, int port) throws IOException {
     this.panelUsers = LocalConfiguration.loadPanelUsers();
     this.credentials = LocalConfiguration.loadCredentials();
-    this.serverSocket = new ServerSocket(port);
+    this.serverSocket = new ServerSocket();
+    this.serverSocket.bind(new InetSocketAddress(host, port));
   }
 
   /** Supplies configuration and a socket for isolated tests  */
@@ -50,8 +56,11 @@ public final class ServerApplication {
    */
 
    static void main(String[] args) throws IOException {
-    ServerApplication server = new ServerApplication(5000);
-    System.out.println("Server started on port 5000. Waiting for clients to connect...");
+     var serverAddress = LocalConfiguration.loadServerAddress();
+     ServerApplication server =
+         new ServerApplication(serverAddress.host(), serverAddress.port());
+     System.out.println("Server started at " + serverAddress.host() + ":"
+         + serverAddress.port() + ". Waiting for clients to connect...");
 
     try (ServerSocket listener = server.serverSocket) {
       while (true) {

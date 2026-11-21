@@ -45,7 +45,8 @@ public final class ControlPanelApplication {
       return;
     }
 
-    try (Socket server = new Socket("127.0.0.1", 5000);
+    var serverAddress = LocalConfiguration.loadServerAddress();
+    try (Socket server = new Socket(serverAddress.host(), serverAddress.port());
          Scanner console = new Scanner(System.in, StandardCharsets.UTF_8)) {
       server.setSoTimeout(10_000);
       var reader = new BufferedReader(
