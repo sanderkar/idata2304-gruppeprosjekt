@@ -86,3 +86,9 @@ With JDK 25 and Maven installed, run the tests from the project root. The TLS in
 ```sh
 mvn test
 ```
+# AI Declaration
+
+The protocol.md document has been translated from Norwegian to English with the use of AI, and it also assisted
+in the writing of both this document, as well as the code generation in general. You will find notes in the respective
+classes where the AI has been used to partly generate code. The diagrams were also made with the assistance of AI.
+All changes made by AI has been reviewed by the team members.

@@ -2,52 +2,89 @@
 
 ## Quick start
 
-Install JDK 25 and open a terminal in the project root.
+Install JDK 25 and open a terminal in the project root. The launcher uses
+the JDK tools directly.
 
-On macOS or Linux, run:
+### macOS and Linux
 
 ```sh
 ./run-local.sh
 ```
 
-On Windows, install Git for Windows and run this in PowerShell:
+### Windows
+
+Install Git for Windows and run this in PowerShell from the project root.
 
 ```powershell
 & "C:\Program Files\Git\bin\bash.exe" ./run-local.sh
 ```
 
-If Git is installed elsewhere, open Git Bash in the project root and run
-`bash ./run-local.sh`.
+If Git for Windows is installed elsewhere, open Git Bash in the project root
+and run `bash ./run-local.sh`.
 
-The launcher builds the project, generates temporary credentials and a TLS
-certificate, and opens the control panel in the same terminal. Try `list` or
-`read 12 1`. Type `help` for commands or `exit` to stop the demo. If port 5000
-is busy, run `SMART_HOME_DEMO_PORT=5001 ./run-local.sh` from Bash.
+### Try the demo
+
+The launcher builds the project, generates temporary login tokens and a TLS
+certificate, and starts the server, sensor nodes `12` and `13`, and the
+control panel. The panel opens in the same terminal as `owner-example`.
+
+Both nodes have temperature sensor `1`, humidity sensor `2`, heater `1`,
+and fan `2`. Node `13` also has humidity sensor `3` and fan `3`.
+
+```text
+list
+read 13 3
+on 13 3
+status 13 3
+off 13 3
+exit
+```
+
+Type `help` for the full command list. Typing `exit` stops all demo processes
+and removes the temporary configuration and TLS files.
+
+The demo binds to `127.0.0.1:5000` by default. If port 5000 is busy, set
+`SMART_HOME_DEMO_PORT` when launching.
+
+```bash
+SMART_HOME_DEMO_PORT=5001 bash ./run-local.sh
+```
+
+In PowerShell, use the following commands.
+
+```powershell
+$env:SMART_HOME_DEMO_PORT = "5001"
+& "C:\Program Files\Git\bin\bash.exe" ./run-local.sh
+```
 
 ## Manual setup
 
 Use this setup for IntelliJ, separate terminals, or separate machines. Use
 Java 25 and run each application with the project root as its working directory.
 
-Copy `config/local.properties.example` to `config/local.properties` and replace
-the placeholder tokens with your own values. The local file is ignored by Git.
-When running on one machine from the same project folder, all three apps read
-this file automatically.
-You do not need to enter credentials in each IntelliJ run configuration.
+Copy `config/local.properties.example` to `config/local.properties` and
+replace `SMART_HOME_NODE_12_TOKEN` and `SMART_HOME_PANEL_TOKEN` with distinct
+values for node `12` and `owner-example`. To start node `13` too, add
+`SMART_HOME_NODE_13_TOKEN` with its own value. Tokens can contain 1–128
+letters, digits, periods, hyphens, or underscores. The file is ignored by Git.
+When the apps run from the same project folder, they share this configuration.
 
 Environment variables override values in the file. Remove old token environment
 variables from your IntelliJ run configurations when switching to the local file;
 otherwise different overrides can cause authentication failures.
 
-The server address is configured with `SMART_HOME_HOST` and `SMART_HOME_PORT`.
-The defaults are `127.0.0.1` and `5000`. Set the same values for the server,
-sensor nodes and control panels. When running on different machines, use the
-server machine's reachable IP address or DNS name from the clients.
+The default address is `127.0.0.1:5000`. For a setup across machines, use
+`SMART_HOME_HOST` on the server to bind to a reachable interface. On each
+client, set `SMART_HOME_HOST` to the server's reachable IP address or DNS
+name. Set `SMART_HOME_PORT` to the same port on the server and all clients.
+Give each client its own token and configure a matching value on the server.
+Keep the server's credential file on the server.
 
 ### Set up TLS
 
-All connections use TLS 1.3. From the project root, use the Java 25 `keytool`
-to create a local server identity and export its public certificate:
+All connections use TLS 1.3. From the project root, use the JDK 25 `keytool`
+to create a server identity and export its public certificate. Run these
+commands in Bash. On Windows, use Git Bash.
 
 ```sh
 mkdir -p config/tls
@@ -67,43 +104,60 @@ The server's default keystore path is `config/tls/server.p12`. Clients load
 `SMART_HOME_TLS_CERTIFICATE` to override those paths.
 
 For a demo across machines, include the server address used by the clients in
-the certificate's SAN. For example, add `ip:192.168.1.20` or `dns:sha.example`
-to the comma-separated SAN list before generating the certificate. Copy
-`server.crt` to both client machines over a trusted channel. Keep `server.p12`
-and its password on the server. The generated TLS files are ignored by Git.
+the certificate's subject alternative name (SAN). For example, add
+`ip:192.168.1.20` or `dns:sha.example` to the comma-separated SAN list before
+generating the certificate. Copy `server.crt` to each client machine over a
+trusted channel. Keep `server.p12` and its password on the server. The
+generated TLS files are ignored by Git.
 When replacing the certificate, distribute the new public certificate and
 restart the affected applications.
 
 ## Start the applications
 
-Run these main classes in this order, keeping the first two running:
+In IntelliJ, run the main classes shown below, using the project root as the
+working directory. In separate terminals, first compile from the project root
+with Maven and JDK 25.
 
-1. `no.ntnu.idata2304.smarthome.server.ServerApplication`
-2. `no.ntnu.idata2304.smarthome.sensornode.SensorNodeApplication`
-3. `no.ntnu.idata2304.smarthome.controlpanel.ControlPanelApplication`
+```sh
+mvn compile
+```
 
-The default node is `12`, with temperature sensor `1` and heater `1`. The default
-panel user is `owner-example`. By default, the applications communicate on `127.0.0.1:5000`.
-The node should receive `READY;1` and the panel should display its command menu.
+Start the server in the first terminal.
+
+```sh
+java -cp target/classes no.ntnu.idata2304.smarthome.server.ServerApplication
+```
+
+Start node `12` in a second terminal.
+
+```sh
+java -cp target/classes no.ntnu.idata2304.smarthome.sensornode.SensorNodeApplication 12
+```
+
+To match the quick-start demo, start node `13` in another terminal after
+configuring `SMART_HOME_NODE_13_TOKEN`.
+
+```sh
+java -cp target/classes no.ntnu.idata2304.smarthome.sensornode.SensorNodeApplication 13
+```
+
+Once the nodes report `READY;1`, start the control panel in its own terminal.
+
+```sh
+java -cp target/classes no.ntnu.idata2304.smarthome.controlpanel.ControlPanelApplication
+```
+
+Passing no node ID starts node `12`. Passing no panel user starts
+`owner-example`. Run `list` in the panel to check which nodes are registered.
 The server logs `Client connected over TLSv1.3` for each successful handshake.
 If a client reports a TLS handshake error, verify its public certificate and
 that `SMART_HOME_HOST` matches the certificate.
 
-Try these commands in the control panel:
-
-```text
-list
-read 12 1
-on 12 1
-status 12 1
-off 12 1
-exit
-```
-
 ## Demonstrate recovery after an outage
 
-1. Start the three applications separately. In the panel, run `read 12 1` and `on 12 2` to
-   save a temperature reading and turn on the fan.
+1. Start the server, node `12`, and the control panel separately. In the
+   panel, run `read 12 1` and `on 12 2` to cache a temperature reading and
+   turn on the fan.
 2. Stop only the server. Leave the sensor node and panel running. Check that
    the panel reports the interrupted connection.
 3. Enter `read 12 1` while the server is down. Leave it down through the retry
@@ -119,8 +173,9 @@ lost its reply.
 
 ## Other nodes and users
 
-Pass a node ID as the sensor application's first program argument. For node `13`,
-add `SMART_HOME_NODE_13_TOKEN` to the local file before starting the server.
+Pass a numeric node ID as the sensor application's first program argument.
+Set the corresponding `SMART_HOME_NODE_<id>_TOKEN` on the server and node
+before starting them.
 
 ### Automatic node addresses
 
@@ -156,13 +211,9 @@ numeric address shown in the panel.
 Pass a user ID as the panel application's first program argument. The configured
 example users are `owner-example`, `sha-example`, `guest-example` and
 `technician-example`. The panel selects the matching token name from
-`config/panel-users.properties`; the server enforces that account's permissions.
+`config/panel-users.properties`. The server enforces that account's permissions.
 
 Restart the server and affected clients after changing credentials. Each process
 loads its configuration at startup. `ERROR;AUTH_FAILED` means the supplied token
 does not match the server's configured token or the panel account is disabled.
 Setting a token only in the client's environment does not configure the server.
-
-The shared local file is for development on one computer. For separate machines,
-provision each client with its own token and configure the server with matching
-tokens. Do not distribute a file containing every account's credentials to users.
