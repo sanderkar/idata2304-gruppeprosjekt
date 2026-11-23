@@ -12,8 +12,8 @@ import no.ntnu.idata2304.smarthome.common.protocol.AutomaticNodeRegistration;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
 import no.ntnu.idata2304.smarthome.common.security.TlsContexts;
-import no.ntnu.idata2304.smarthome.sensornode.actuator.Fan;
-import no.ntnu.idata2304.smarthome.sensornode.actuator.Heater;
+import no.ntnu.idata2304.smarthome.sensornode.actuator.Actuator;
+import no.ntnu.idata2304.smarthome.sensornode.actuator.ActuatorFactory;
 import no.ntnu.idata2304.smarthome.sensornode.sensor.SensorFactory;
 
 /** Entry point for the sensor node application. */
@@ -68,8 +68,8 @@ public final class SensorNodeApplication {
         ? new AutomaticNodeRegistration(args[1], token).encode()
         : "HELLO_NODE;1;" + staticNodeId + ";" + token + Protocol.HEARTBEAT_SUFFIX;
     Predicate<String> isReady = automatic ? AutomaticNodeRegistration::isReady : "READY;1"::equals;
-    var heater = new Heater(1);
-    var fan = new Fan(2);
+    var heater = ActuatorFactory.create("HEATER", 1);
+    var fan = ActuatorFactory.create("FAN", 2);
     var temperature = SensorFactory.create("TEMPERATURE", 1, 22.0);
     var humidity = SensorFactory.create("HUMIDITY", 2, 50.0);
     SensorNode node = null;
@@ -84,8 +84,12 @@ public final class SensorNodeApplication {
           node = new SensorNode(nodeId);
           node.addSensor(temperature);
           node.addSensor(humidity);
-          node.addHeater(heater);
+          node.addActuator(heater);
           node.addActuator(fan);
+          if (nodeId == 13) {
+            node.addSensor(SensorFactory.create("HUMIDITY", 3, 65.0));
+            node.addActuator(ActuatorFactory.create("FAN", 3));
+          }
         }
         System.out.println("Connected to server at " + serverAddress.host() + ":"
             + serverAddress.port());
@@ -123,7 +127,7 @@ public final class SensorNodeApplication {
     }
   }
 
-  static String respondToCommand(String command, SensorNode node, Heater heater) {
+  static String respondToCommand(String command, SensorNode node, Actuator heater) {
     int nodeId = node.getNodeId();
     try {
       switch (command.split(";", 2)[0]) {
@@ -174,7 +178,7 @@ public final class SensorNodeApplication {
             return "ERROR;WRONG_NODE";
           }
 
-          if (heaterCommand.getHeaterId() != heater.getHeaterId()) {
+          if (heaterCommand.getHeaterId() != heater.getActuatorId()) {
             return "ERROR;UNKNOWN_ACTUATOR";
           }
 
@@ -182,7 +186,7 @@ public final class SensorNodeApplication {
           return "ACTUATOR_STATE;"
               + nodeId
               + ";"
-              + heater.getHeaterId()
+              + heater.getActuatorId()
               + ";HEATER;"
               + (heater.isOn() ? "ON" : "OFF");
         }
@@ -193,7 +197,7 @@ public final class SensorNodeApplication {
             return "ERROR;WRONG_NODE";
           }
 
-          if (heaterCommand.getHeaterId() != heater.getHeaterId()) {
+          if (heaterCommand.getHeaterId() != heater.getActuatorId()) {
             return "ERROR;UNKNOWN_ACTUATOR";
           }
 
@@ -201,7 +205,7 @@ public final class SensorNodeApplication {
           return "ACTUATOR_STATE;"
               + nodeId
               + ";"
-              + heater.getHeaterId()
+              + heater.getActuatorId()
               + ";HEATER;"
               + (heater.isOn() ? "ON" : "OFF");
         }

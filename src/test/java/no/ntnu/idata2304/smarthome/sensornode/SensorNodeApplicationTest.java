@@ -3,7 +3,7 @@ package no.ntnu.idata2304.smarthome.sensornode;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Heater;
 import no.ntnu.idata2304.smarthome.sensornode.sensor.TemperatureSensor;
 import no.ntnu.idata2304.smarthome.sensornode.sensor.SensorFactory;
-import no.ntnu.idata2304.smarthome.sensornode.actuator.Fan;
+import no.ntnu.idata2304.smarthome.sensornode.actuator.ActuatorFactory;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -125,9 +125,9 @@ public class SensorNodeApplicationTest {
   @Test
   void setActuatorTurnsFanOnAndOff() {
     SensorNode node = new SensorNode(12);
-    Heater heater = new Heater(1);
-    Fan fan = new Fan(2);
-    node.addHeater(heater);
+    var heater = ActuatorFactory.create("HEATER", 1);
+    var fan = ActuatorFactory.create("FAN", 2);
+    node.addActuator(heater);
     node.addActuator(fan);
 
     String onResponse = SensorNodeApplication.respondToCommand(

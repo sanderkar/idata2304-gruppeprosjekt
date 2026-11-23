@@ -26,8 +26,6 @@ public final class ControlPanelApplication {
   private static final String ID = "[0-9]{1,10}";
   private static final int CACHED_READING_LIMIT = 100;
 
-  private record CachedReading(String response, Instant receivedAt) {}
-
   /** Private constructor to prevent instantiation of the ControlPanelApplication class. */
   private ControlPanelApplication() {}
 
@@ -57,8 +55,8 @@ public final class ControlPanelApplication {
 
     var serverAddress = LocalConfiguration.loadServerAddress(configuration);
     var sockets = TlsContexts.forClient(configuration).getSocketFactory();
-    try (var server = new PanelConnection(
-            serverAddress, sockets, "HELLO_PANEL;1;" + userId + ";" + token);
+    try (var server =
+            new PanelConnection(serverAddress, sockets, "HELLO_PANEL;1;" + userId + ";" + token);
         Scanner console = new Scanner(System.in, StandardCharsets.UTF_8)) {
       if (!server.start()) {
         return;
@@ -91,8 +89,8 @@ public final class ControlPanelApplication {
           System.out.println("Invalid command. Type 'help' to see the available commands.");
           continue;
         }
-        String response = request.startsWith("SET_ACTUATOR;")
-            ? server.control(request) : server.read(request);
+        String response =
+            request.startsWith("SET_ACTUATOR;") ? server.control(request) : server.read(request);
         if (response.startsWith("NODES;")) {
           showConnectedNodes(response, server);
         } else if (request.startsWith("GET_READING;")) {
@@ -193,16 +191,17 @@ public final class ControlPanelApplication {
     } else if (response.equals("NODES")) {
       System.out.println("No connected sensor nodes.");
     } else if (response.startsWith("ERROR;")) {
-      String message = switch (response) {
-        case "ERROR;FORBIDDEN" -> "Your account does not have access to this device or action.";
-        case "ERROR;NODE_UNAVAILABLE" -> "The node is not connected.";
-        case "ERROR;SERVER_UNAVAILABLE" -> "The panel cannot reach the server.";
-        case "ERROR;UNKNOWN_SENSOR" -> "That sensor ID does not exist on this node.";
-        case "ERROR;UNKNOWN_ACTUATOR" -> "That actuator ID does not exist on this node.";
-        case "ERROR;BUSY" -> "The node is busy. Try again.";
-        case "ERROR;TIMEOUT" -> "The node did not respond in time.";
-        default -> "The request could not be completed.";
-      };
+      String message =
+          switch (response) {
+            case "ERROR;FORBIDDEN" -> "Your account does not have access to this device or action.";
+            case "ERROR;NODE_UNAVAILABLE" -> "The node is not connected.";
+            case "ERROR;SERVER_UNAVAILABLE" -> "The panel cannot reach the server.";
+            case "ERROR;UNKNOWN_SENSOR" -> "That sensor ID does not exist on this node.";
+            case "ERROR;UNKNOWN_ACTUATOR" -> "That actuator ID does not exist on this node.";
+            case "ERROR;BUSY" -> "The node is busy. Try again.";
+            case "ERROR;TIMEOUT" -> "The node did not respond in time.";
+            default -> "The request could not be completed.";
+          };
       System.out.println(message + " (" + response + ")");
     } else {
       System.out.println(response);
@@ -257,4 +256,6 @@ public final class ControlPanelApplication {
       System.out.printf("    %-10s %-10s %s%n", category, device[1], device[2]);
     }
   }
+
+  private record CachedReading(String response, Instant receivedAt) {}
 }
