@@ -1,0 +1,52 @@
+@startuml
+!pragma layout smetana
+title SHA Smart Home - Sensor node classes
+skinparam shadowing false
+hide empty members
+
+class SensorNodeApplication
+
+class SensorNode {
+  - nodeId : int
+  + addSensor(sensor : Sensor) : void
+  + addActuator(actuator : Actuator) : void
+  + findSensor(sensorId : int) : Sensor
+  + findActuator(actuatorId : int) : Actuator
+}
+
+abstract class Sensor {
+  + getSensorId() : int
+  + getValue() : double
+  + simulateChange() : void
+}
+class TemperatureSensor
+class HumiditySensor
+class SensorFactory {
+  {static} + create(type : String, sensorId : int, initialValue : double) : Sensor
+}
+interface Actuator {
+  + turnOn() : void
+  + turnOff() : void
+  + isOn() : boolean
+}
+class Heater
+class Fan
+class ActuatorFactory {
+  {static} + create(type : String, actuatorId : int) : Actuator
+}
+
+SensorNodeApplication ..> SensorNode : creates and populates
+SensorNodeApplication ..> SensorFactory : creates sensors through
+SensorNodeApplication ..> ActuatorFactory : creates actuators through
+
+SensorNode "1" o-- "0..*" Sensor : sensors
+SensorNode "1" o-- "0..*" Actuator : actuators
+Sensor <|-- TemperatureSensor
+Sensor <|-- HumiditySensor
+SensorFactory ..> TemperatureSensor : creates
+SensorFactory ..> HumiditySensor : creates
+Actuator <|.. Heater
+Actuator <|.. Fan
+ActuatorFactory ..> Heater : creates
+ActuatorFactory ..> Fan : creates
+@enduml

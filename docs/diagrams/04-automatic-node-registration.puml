@@ -1,0 +1,25 @@
+@startuml
+title SHA Smart Home - Automatic node address assignment
+skinparam shadowing false
+hide footbox
+participant "Sensor node\nKITCHEN" as Node
+participant "Broker server" as Server
+participant "Address registry" as Registry
+
+Node -> Server : Establish TLS 1.3 connection
+Node -> Server : HELLO_AUTO_NODE;1;KITCHEN;<token>
+Server -> Server : Verify configured token
+alt Valid token and successful registration
+  Server -> Registry : addressFor("KITCHEN")
+  alt Name already has an address
+    Registry --> Server : Return saved address
+  else New name
+    Registry -> Registry : Find a free address and persist it
+    Registry --> Server : Return new address
+  end
+  Server -> Server : Register active node connection
+  Server --> Node : READY_NODE;1;100000 (example)
+else Invalid token
+  Server --> Node : ERROR;AUTH_FAILED
+end
+@enduml

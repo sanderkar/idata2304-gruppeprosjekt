@@ -1,0 +1,35 @@
+@startuml
+title SHA Smart Home - Reading a sensor and controlling a fan
+skinparam shadowing false
+hide footbox
+actor "User" as User
+participant "Control panel" as Panel
+participant "Broker server" as Server
+participant "Sensor node 12" as Node
+
+note over Panel, Node
+  Both clients already have registered TLS sessions with the server.
+end note
+
+User -> Panel : read 12 1
+Panel -> Server : GET_READING;12;1
+Server -> Server : Check read permission
+Server -> Node : GET_READING;12;1
+Node --> Server : READING;12;1;TEMPERATURE;22.04
+Server --> Panel : READING;12;1;TEMPERATURE;22.04
+Panel --> User : Show measurement in °C
+
+User -> Panel : on 12 2
+Panel -> Server : SET_ACTUATOR;12;2;ON
+Server -> Server : Check write permission
+alt Action allowed and node available
+  Server -> Node : SET_ACTUATOR;12;2;ON
+  Node -> Node : Turn on fan 2
+  Node --> Server : ACTUATOR_STATE;12;2;FAN;ON
+  Server --> Panel : ACTUATOR_STATE;12;2;FAN;ON
+  Panel --> User : Show confirmed fan state
+else Permission denied
+  Server --> Panel : ERROR;FORBIDDEN
+  Panel --> User : Show access error
+end
+@enduml

@@ -1,0 +1,28 @@
+@startuml
+title SHA Smart Home - Control panel connection recovery
+skinparam shadowing false
+hide footbox
+participant "Control panel" as Panel
+participant "Broker server" as Server
+
+Panel -> Server : PING
+Server --> Panel : PONG
+
+... Connection lost ...
+
+Panel -> Panel : Detect I/O failure and close session
+note left of Panel
+  A sensor read can be retried.
+  If a read fails after retries, the panel
+  can display the last confirmed value.
+  If actuator confirmation is lost,
+  the user can check its state after recovery.
+end note
+loop Background retries while the server is unreachable
+  Panel -> Panel : Wait before the next connection attempt
+end
+Panel -> Server : Establish a new TLS 1.3 connection
+Panel -> Server : HELLO_PANEL;1;owner-example;<token>
+Server --> Panel : READY;1
+Panel -> Panel : Report that the connection is restored
+@enduml

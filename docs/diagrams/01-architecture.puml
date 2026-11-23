@@ -1,0 +1,26 @@
+@startuml
+!pragma layout smetana
+title SHA Smart Home - System architecture
+skinparam componentStyle rectangle
+skinparam shadowing false
+left to right direction
+
+actor "User" as User
+component "Control panel\nControlPanelApplication" as Panel
+component "Broker server\nServerApplication" as Server
+component "Sensor node\nSensorNodeApplication" as Node
+database "Automatic node addresses\nnode-addresses.properties" as Registry
+
+User --> Panel : CLI commands
+Panel --> Server : TLS 1.3 over TCP\nstarts connection
+Node --> Server : TLS 1.3 over TCP\nstarts connection
+Server --> Registry : load and save assignments
+
+note bottom of Node
+  Simulates temperature, humidity, a heater and a fan.
+end note
+note bottom of Server
+  Registers clients, checks access and routes requests.
+  Supports multiple panel and node connections.
+end note
+@enduml
