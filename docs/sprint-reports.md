@@ -187,6 +187,6 @@ joint demos would make integration feedback easier to act on.
 
 - [Source repository](https://github.com/sanderkar/idata2304-gruppeprosjekt)
 - [Project assignment](https://github.com/sanderkar/idata2304-gruppeprosjekt/blob/main/IDATA2304GroupProject.pdf)
-- [Protocol specification](https://github.com/sanderkar/idata2304-gruppeprosjekt/blob/main/protocol.md)
+- [Protocol specification](https://github.com/sanderkar/idata2304-gruppeprosjekt/blob/main/docs/protocol.md)
 - [Running guide](https://github.com/sanderkar/idata2304-gruppeprosjekt/blob/main/docs/running.md)
 - [Architecture and sequence diagrams](https://github.com/sanderkar/idata2304-gruppeprosjekt/blob/main/docs/diagrams/index.md)
