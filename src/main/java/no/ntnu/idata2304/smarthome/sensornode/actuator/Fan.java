@@ -1,8 +1,6 @@
 package no.ntnu.idata2304.smarthome.sensornode.actuator;
 
-/**
- * Represents a fan in the smart home system.
- */
+/** Represents a fan in the smart home system. */
 public class Fan implements Actuator {
 
   private final int fanId;
@@ -16,9 +14,7 @@ public class Fan implements Actuator {
    */
   public Fan(int fanId) {
     if (fanId < 0) {
-      throw new IllegalArgumentException(
-          "Fan ID must be a non-negative integer."
-      );
+      throw new IllegalArgumentException("Fan ID must be a non-negative integer.");
     }
     this.fanId = fanId;
   }

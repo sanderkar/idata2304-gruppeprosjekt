@@ -1,16 +1,13 @@
 package no.ntnu.idata2304.smarthome.sensornode;
 
+import java.util.ArrayList;
+import java.util.List;
 import no.ntnu.idata2304.smarthome.common.protocol.TurnOnHeaterCommand;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Actuator;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Heater;
 import no.ntnu.idata2304.smarthome.sensornode.sensor.Sensor;
-import java.util.ArrayList;
-import java.util.List;
 
-/**
- * Represents a sensor node in the smart home system.
- */
-
+/** Represents a sensor node in the smart home system. */
 public class SensorNode {
 
   private final int nodeId;
@@ -22,13 +19,11 @@ public class SensorNode {
    *
    * @param nodeId the unique identifier for the sensor node
    */
-
   public SensorNode(int nodeId) {
 
     if (nodeId < 0) {
       throw new IllegalArgumentException("Node ID must be a non-negative integer.");
     }
-
 
     this.nodeId = nodeId;
     this.sensors = new ArrayList<>();
@@ -40,11 +35,11 @@ public class SensorNode {
    *
    * @param actuator the actuator to add
    */
-
   public void addActuator(Actuator actuator) {
     for (Actuator existingActuator : actuators) {
       if (existingActuator.getActuatorId() == actuator.getActuatorId()) {
-        throw new IllegalArgumentException("Actuator with ID " + actuator.getActuatorId() + " already exists.");
+        throw new IllegalArgumentException(
+            "Actuator with ID " + actuator.getActuatorId() + " already exists.");
       }
     }
     actuators.add(actuator);
@@ -55,7 +50,6 @@ public class SensorNode {
    *
    * @return a list of actuators
    */
-
   public List<Actuator> getActuators() {
     return List.copyOf(actuators);
   }
@@ -66,7 +60,6 @@ public class SensorNode {
    * @param actuatorId the unique identifier of the actuator to find
    * @return the actuator with the specified ID, or null if not found
    */
-
   public Actuator findActuator(int actuatorId) {
     for (Actuator actuator : actuators) {
       if (actuator.getActuatorId() == actuatorId) {
@@ -113,11 +106,9 @@ public class SensorNode {
    *
    * @return the node ID
    */
-
   public int getNodeId() {
     return nodeId;
   }
-
 
   /**
    * Adds a sensor to the sensor node.
@@ -125,11 +116,11 @@ public class SensorNode {
    * @param sensor the sensor to add
    * @throws IllegalArgumentException if a sensor with the same ID already exists
    */
-
   public void addSensor(Sensor sensor) {
     for (Sensor existingSensor : sensors) {
       if (existingSensor.getSensorId() == sensor.getSensorId()) {
-        throw new IllegalArgumentException("Sensor with ID " + sensor.getSensorId() + " already exists.");
+        throw new IllegalArgumentException(
+            "Sensor with ID " + sensor.getSensorId() + " already exists.");
       }
     }
     sensors.add(sensor);
@@ -140,33 +131,35 @@ public class SensorNode {
    *
    * @return a list of sensors
    */
-
   public List<Sensor> getSensors() {
     return List.copyOf(sensors);
   }
 
+  /**
+   * Finds a sensor by its unique identifier.
+   *
+   * @param sensorId the unique identifier of the sensor to find
+   * @return the sensor with the specified ID, or null if not found
+   */
   public Sensor findSensor(int sensorId) {
-    return sensors.stream().filter(sensor -> sensor.getSensorId() == sensorId)
-        .findFirst().orElse(null);
+    return sensors.stream()
+        .filter(sensor -> sensor.getSensorId() == sensorId)
+        .findFirst()
+        .orElse(null);
   }
 
-  /**
-   * Updates the readings of all associated sensors.
-   */
-
+  /** Updates the readings of all associated sensors. */
   public void updateSensors() {
     for (Sensor sensor : sensors) {
       sensor.simulateChange();
     }
   }
 
-
   /**
    * Adds a heater to the sensor node.
    *
    * @param heater the heater to add
    */
-
   public void addHeater(Heater heater) {
     addActuator(heater);
   }
@@ -192,7 +185,6 @@ public class SensorNode {
    * @param heaterId the unique identifier of the heater to turn on
    * @return true if the heater was found and turned on, false otherwise
    */
-
   public boolean turnOnHeater(int heaterId) {
     for (Heater heater : getHeaters()) {
       if (heater.getHeaterId() == heaterId) {
@@ -209,7 +201,6 @@ public class SensorNode {
    * @param heaterId the unique identifier of the heater to turn off
    * @return true if the heater was found and turned off, false otherwise
    */
-
   public boolean turnOffHeater(int heaterId) {
     for (Heater heater : getHeaters()) {
       if (heater.getHeaterId() == heaterId) {
@@ -232,6 +223,4 @@ public class SensorNode {
     }
     return turnOnHeater(command.getHeaterId());
   }
-
-
 }
