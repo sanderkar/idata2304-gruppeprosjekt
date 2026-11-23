@@ -1,7 +1,6 @@
 package no.ntnu.idata2304.smarthome.common.protocol;
-/**
- * A utility class for decoding messages in the smart home protocol.
- */
+
+/** A utility class for decoding messages in the smart home protocol. */
 public class MessageDecoder {
 
   /**
@@ -45,8 +44,7 @@ public class MessageDecoder {
     int heaterId = Integer.parseInt(parts[2]);
 
     if (nodeId < 0 || heaterId < 0) {
-      throw new IllegalArgumentException(
-          "Node ID and heater ID cannot be negative");
+      throw new IllegalArgumentException("Node ID and heater ID cannot be negative");
     }
 
     return new int[] {nodeId, heaterId};
@@ -90,11 +88,12 @@ public class MessageDecoder {
    * @return the decoded ReadingRequest
    * @throws IllegalArgumentException if the message format is invalid
    */
-
   public static ReadingRequest decodeGetReading(String message) {
     String[] fields = message.split(";", -1);
-    if (fields.length != 3 || !fields[0].equals("GET_READING")
-        || !fields[1].matches("[0-9]+") || !fields[2].matches("[0-9]+")) {
+    if (fields.length != 3
+        || !fields[0].equals("GET_READING")
+        || !fields[1].matches("[0-9]+")
+        || !fields[2].matches("[0-9]+")) {
       throw new IllegalArgumentException("Invalid GET_READING message");
     }
     return new ReadingRequest(Integer.parseInt(fields[1]), Integer.parseInt(fields[2]));
@@ -109,22 +108,11 @@ public class MessageDecoder {
    */
   public static int decodeListDevices(String message) {
     String[] fields = message.split(";", -1);
-    if (fields.length != 2 || !fields[0].equals("LIST_DEVICES")
-        || !fields[1].matches("[0-9]+")) {
+    if (fields.length != 2 || !fields[0].equals("LIST_DEVICES") || !fields[1].matches("[0-9]+")) {
       throw new IllegalArgumentException("Invalid LIST_DEVICES message");
     }
     return Integer.parseInt(fields[1]);
   }
-
-  /**
-   * Represents a request to get a reading from a sensor.
-   *
-   * @param nodeId the ID of the node
-   * @param sensorId the ID of the sensor
-   */
-  public record ReadingRequest(int nodeId, int sensorId) {}
-
-  public record ActuatorRequest(int nodeId, int actuatorId) {}
 
   /**
    * Decodes a request for an actuator's current state.
@@ -135,21 +123,14 @@ public class MessageDecoder {
    */
   public static ActuatorRequest decodeGetActuator(String message) {
     String[] fields = message.split(";", -1);
-    if (fields.length != 3 || !fields[0].equals("GET_ACTUATOR")
-        || !fields[1].matches("[0-9]+") || !fields[2].matches("[0-9]+")) {
+    if (fields.length != 3
+        || !fields[0].equals("GET_ACTUATOR")
+        || !fields[1].matches("[0-9]+")
+        || !fields[2].matches("[0-9]+")) {
       throw new IllegalArgumentException("Invalid GET_ACTUATOR message");
     }
     return new ActuatorRequest(Integer.parseInt(fields[1]), Integer.parseInt(fields[2]));
   }
-
-  /**
-   * Represents a command to control an actuator.
-   *
-   * @param nodeId the ID of the node
-   * @param actuatorId the ID of the actuator
-   * @param state the state to set the actuator to
-   */
-  public record ActuatorCommand(int nodeId, int actuatorId, String state) {}
 
   /**
    * Decodes a string message into an ActuatorCommand.
@@ -160,12 +141,38 @@ public class MessageDecoder {
    */
   public static ActuatorCommand decodeActuator(String message) {
     String[] fields = message.split(";", -1);
-    if (fields.length != 4 || !fields[0].equals("SET_ACTUATOR")
-        || !fields[1].matches("[0-9]+") || !fields[2].matches("[0-9]+")
+    if (fields.length != 4
+        || !fields[0].equals("SET_ACTUATOR")
+        || !fields[1].matches("[0-9]+")
+        || !fields[2].matches("[0-9]+")
         || !fields[3].equals("ON") && !fields[3].equals("OFF")) {
       throw new IllegalArgumentException("Invalid SET_ACTUATOR message");
     }
     return new ActuatorCommand(Integer.parseInt(fields[1]), Integer.parseInt(fields[2]), fields[3]);
   }
 
+  /**
+   * Represents a request to get a reading from a sensor.
+   *
+   * @param nodeId the ID of the node
+   * @param sensorId the ID of the sensor
+   */
+  public record ReadingRequest(int nodeId, int sensorId) {}
+
+  /**
+   * Represents a request to get the current state of an actuator.
+   *
+   * @param nodeId the ID of the node
+   * @param actuatorId the ID of the actuator
+   */
+  public record ActuatorRequest(int nodeId, int actuatorId) {}
+
+  /**
+   * Represents a command to control an actuator.
+   *
+   * @param nodeId the ID of the node
+   * @param actuatorId the ID of the actuator
+   * @param state the state to set the actuator to
+   */
+  public record ActuatorCommand(int nodeId, int actuatorId, String state) {}
 }

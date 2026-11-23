@@ -1,8 +1,6 @@
 package no.ntnu.idata2304.smarthome.common.protocol;
 
-/**
- * A command to turn off a heater.
- */
+/** A command to turn off a heater. */
 public class TurnOffHeaterCommand {
   private final int nodeId;
   private final int heaterId;

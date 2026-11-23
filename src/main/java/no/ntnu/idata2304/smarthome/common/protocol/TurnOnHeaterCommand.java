@@ -1,8 +1,6 @@
 package no.ntnu.idata2304.smarthome.common.protocol;
 
-/**
- * A command to turn on a heater.
- */
+/** A command to turn on a heater. */
 public class TurnOnHeaterCommand {
   private final int nodeId;
   private final int heaterId;
@@ -13,7 +11,6 @@ public class TurnOnHeaterCommand {
    * @param nodeId the unique identifier for the sensor node
    * @param heaterId the unique identifier for the heater
    */
-
   public TurnOnHeaterCommand(int nodeId, int heaterId) {
     this.heaterId = heaterId;
     this.nodeId = nodeId;
@@ -24,7 +21,6 @@ public class TurnOnHeaterCommand {
    *
    * @return the node ID
    */
-
   public int getNodeId() {
     return nodeId;
   }
@@ -34,7 +30,6 @@ public class TurnOnHeaterCommand {
    *
    * @return the heater ID
    */
-
   public int getHeaterId() {
     return heaterId;
   }
