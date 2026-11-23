@@ -1,15 +1,12 @@
 package no.ntnu.idata2304.smarthome.controlpanel;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Scanner;
 import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
 import no.ntnu.idata2304.smarthome.common.model.SensorType;
-import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
 
 /** Console client for listing nodes and requesting sensor readings. */
 public final class ControlPanelApplication {
@@ -18,6 +15,9 @@ public final class ControlPanelApplication {
       "Commands: list | read <node ID> <sensor ID> | on <node ID> <actuator ID> "
           + "| off <node ID> <actuator ID> | status <node ID> <actuator ID> | exit";
   private static final String ID = "[0-9]{1,9}";
+  private static final int CACHED_READING_LIMIT = 100;
+
+  private record CachedReading(String response, Instant receivedAt) {}
 
   /** Private constructor to prevent instantiation of the ControlPanelApplication class. */
   private ControlPanelApplication() {}
@@ -26,9 +26,10 @@ public final class ControlPanelApplication {
    * The main entry point for the control panel application.
    *
    * @param args the command-line arguments
-   * @throws IOException if an I/O error occurs
+   * @throws IOException if local configuration cannot be read
+   * @throws InterruptedException if interrupted while retrying a read
    */
-  static void main(String[] args) throws IOException {
+  static void main(String[] args) throws IOException, InterruptedException {
     String userId = args.length == 0 ? "owner-example" : args[0];
     String tokenName = LocalConfiguration.loadPanelUsers().getProperty(userId + ".token-env");
     if (tokenName == null || tokenName.isEmpty()) {
@@ -45,28 +46,13 @@ public final class ControlPanelApplication {
     }
 
     var serverAddress = LocalConfiguration.loadServerAddress();
-    try (Socket server = new Socket(serverAddress.host(), serverAddress.port());
+    try (var server = new PanelConnection(serverAddress, "HELLO_PANEL;1;" + userId + ";" + token);
         Scanner console = new Scanner(System.in, StandardCharsets.UTF_8)) {
-      server.setSoTimeout(10_000);
-      var reader =
-          new BufferedReader(
-              new InputStreamReader(server.getInputStream(), StandardCharsets.UTF_8));
-      var writer = new OutputStreamWriter(server.getOutputStream(), StandardCharsets.UTF_8);
-
-      Protocol.writeLine(writer, "HELLO_PANEL;1;" + userId + ";" + token);
-      String registration = reader.readLine();
-      if (!"READY;1".equals(registration)) {
-        System.err.println("Panel registration failed: " + registration);
-        if ("ERROR;AUTH_FAILED".equals(registration)) {
-          System.err.println(
-              "Check that "
-                  + tokenName
-                  + " matches the server configuration,"
-                  + "then restart the server. See docs/running.md.");
-        }
+      if (!server.start()) {
         return;
       }
 
+      var readings = new LinkedHashMap<String, CachedReading>();
       System.out.println(USAGE);
       while (console.hasNextLine()) {
         String[] command = console.nextLine().trim().split("\\s+");
@@ -78,22 +64,34 @@ public final class ControlPanelApplication {
           System.out.println(USAGE);
           continue;
         }
-        Protocol.writeLine(writer, request);
-
-        String response = reader.readLine();
-        if (response == null) {
-          System.err.println("Server closed the connection.");
-          return;
-        }
+        String response = request.startsWith("SET_ACTUATOR;")
+            ? server.control(request) : server.read(request);
         if (response.startsWith("NODES;")) {
-          if (!showConnectedNodes(response, reader, writer)) {
-            System.err.println("Server closed the connection.");
-            return;
-          }
+          showConnectedNodes(response, server);
+        } else if (request.startsWith("GET_READING;")) {
+          showReading(request, response, readings);
         } else {
           showResponse(response);
         }
       }
+    }
+  }
+
+  private static void showReading(
+      String request, String response, LinkedHashMap<String, CachedReading> readings) {
+    if (response.startsWith("READING;")) {
+      readings.putLast(request, new CachedReading(response, Instant.now()));
+      if (readings.size() > CACHED_READING_LIMIT) {
+        readings.pollFirstEntry();
+      }
+      showResponse(response);
+    } else if (PanelConnection.isTemporaryFailure(response) && readings.containsKey(request)) {
+      CachedReading cached = readings.get(request);
+      System.out.println("Latest reading unavailable (" + response + "). "
+          + "Showing cached reading from " + cached.receivedAt() + ".");
+      showResponse(cached.response());
+    } else {
+      showResponse(response);
     }
   }
 
@@ -165,23 +163,19 @@ public final class ControlPanelApplication {
    * Displays the list of connected sensor nodes and their devices.
    *
    * @param response the response from the server containing the list of nodes
-   * @param reader the BufferedReader to read responses from the server
-   * @param writer the OutputStreamWriter to send requests to the server
-   * @return true if all nodes were successfully listed, false if the server closed the connection
-   * @throws IOException if an I/O error occurs while reading from or writing to the server
+   * @param server the control panel's connection to the server
+   * @throws InterruptedException if interrupted while retrying a read
    */
-  private static boolean showConnectedNodes(
-      String response, BufferedReader reader, OutputStreamWriter writer) throws IOException {
+  private static void showConnectedNodes(String response, PanelConnection server)
+      throws InterruptedException {
     for (String nodeId : response.substring(6).split(";")) {
       System.out.println("Connected sensor node " + nodeId);
-      Protocol.writeLine(writer, "LIST_DEVICES;" + nodeId);
-      String devices = reader.readLine();
-      if (devices == null) {
-        return false;
-      }
+      String devices = server.read("LIST_DEVICES;" + nodeId);
       showDevices(nodeId, devices);
+      if (PanelConnection.SERVER_UNAVAILABLE.equals(devices)) {
+        break;
+      }
     }
-    return true;
   }
 
   /**

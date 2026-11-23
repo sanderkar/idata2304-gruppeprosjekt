@@ -1,14 +1,11 @@
 package no.ntnu.idata2304.smarthome.sensornode;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.StringJoiner;
 import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
+import no.ntnu.idata2304.smarthome.common.network.ClientConnection;
+import no.ntnu.idata2304.smarthome.common.network.ClientConnection.RegistrationRejected;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Fan;
@@ -25,9 +22,10 @@ public final class SensorNodeApplication {
    * Starts the sensor node application and connects to the server.
    *
    * @param args optional sensor node ID, defaults to 12
-   * @throws IOException if an I/O error occurs when connecting to the server
+   * @throws IOException if local configuration cannot be read
+   * @throws InterruptedException if interrupted while waiting to reconnect
    */
-  static void main(String[] args) throws IOException {
+  static void main(String[] args) throws IOException, InterruptedException {
     int nodeId = args.length == 0 ? 12 : Integer.parseInt(args[0]);
     String tokenName = "SMART_HOME_NODE_" + nodeId + "_TOKEN";
     String token = LocalConfiguration.loadCredentials().get(tokenName);
@@ -40,42 +38,39 @@ public final class SensorNodeApplication {
     }
 
     var serverAddress = LocalConfiguration.loadServerAddress();
-    try (Socket server = new Socket(serverAddress.host(), serverAddress.port())) {
-      System.out.println(
-          "Connected to server at "
-              + server.getInetAddress().getHostAddress()
-              + ":"
-              + server.getPort());
-      var writer = new OutputStreamWriter(server.getOutputStream(), StandardCharsets.UTF_8);
-      Protocol.writeLine(writer, "HELLO_NODE;1;" + nodeId + ";" + token);
+    String hello = "HELLO_NODE;1;" + nodeId + ";" + token + Protocol.HEARTBEAT_SUFFIX;
+    var node = new SensorNode(nodeId);
+    var heater = new Heater(1);
+    node.addSensor(SensorFactory.create("TEMPERATURE", 1, 22.0));
+    node.addSensor(SensorFactory.create("HUMIDITY", 2, 50.0));
+    node.addHeater(heater);
+    node.addActuator(new Fan(2));
 
-      var reader =
-          new BufferedReader(
-              new InputStreamReader(server.getInputStream(), StandardCharsets.UTF_8));
-      String response = reader.readLine();
-      System.out.println("Received response from server: " + response);
-
-      if (!"READY;1".equals(response)) {
-        System.err.println(
-            "Node registration failed. Check that "
-                + tokenName
-                + " matches the server configuration,"
-                + " then restart the server. See docs/running.md.");
+    long retryDelay = 1_000;
+    while (!Thread.currentThread().isInterrupted()) {
+      try (var server = ClientConnection.connect(serverAddress, hello, 15_000)) {
+        System.out.println("Connected to server at " + serverAddress.host() + ":"
+            + serverAddress.port());
+        System.out.println("Received response from server: READY;1");
+        retryDelay = 1_000;
+        while (!Thread.currentThread().isInterrupted()) {
+          String command = server.read();
+          server.send(Protocol.PING.equals(command)
+              ? Protocol.PONG : respondToCommand(command, node, heater));
+        }
         return;
+      } catch (RegistrationRejected exception) {
+        if (!"ERROR;DUPLICATE_NODE".equals(exception.getMessage())) {
+          System.err.println("Node registration failed: " + exception.getMessage()
+              + ". Check " + tokenName + " against the server configuration.");
+          return;
+        }
+      } catch (IOException exception) {
+        // Retry after a failed connection, a closed session or a missed heartbeat.
       }
-
-      var node = new SensorNode(nodeId);
-      var heater = new Heater(1);
-      var fan = new Fan(2);
-
-      node.addSensor(SensorFactory.create("TEMPERATURE", 1, 22.0));
-      node.addSensor(SensorFactory.create("HUMIDITY", 2, 50.0));
-      node.addHeater(heater);
-      node.addActuator(fan);
-      String command;
-      while ((command = reader.readLine()) != null) {
-        Protocol.writeLine(writer, respondToCommand(command, node, heater));
-      }
+      System.err.println("Node disconnected. Reconnecting in " + retryDelay / 1_000 + " s.");
+      Thread.sleep(retryDelay);
+      retryDelay = Math.min(retryDelay * 2, 4_000);
     }
   }
 

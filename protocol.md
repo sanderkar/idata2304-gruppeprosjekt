@@ -4,7 +4,7 @@
 
 Dette dokumentet beskriver protokollen mellom sensornoder, kontrollpaneler og en mellomserver i SHA. Kontrollpanelet kan finne tilkoblede noder, hente målinger og aktuatorstatus og styre en bestemt aktuator.
 
-**Status:** Protokollversjon 1 er et designforslag. Dagens kode kan simulere temperatur og varmeovner, kode og dekode `TURN_ON_HEATER` og utføre kommandoen lokalt på riktig node. Serveren har et utkast til mottak av én TCP-linje. Registrering, ruting, svarmeldinger, roller og øvrige meldingstyper nedenfor må implementeres.
+Versjon 1 støtter registrering, tilgangskontroll, avlesning og styring av simulerte enheter. Klientene kobler seg til på nytt ved midlertidige nettverksbrudd.
 
 ## 2. Terminologi
 
@@ -50,7 +50,7 @@ Kontrollpanelet kan markere en avvikende temperatur ved visning, for eksempel n�
 
 Protokollen er tilkoblingsorientert og har tilstand. Første melding på en ny forbindelse må være en av de to `HELLO`-meldingene. Ved `READY;1` blir forbindelsen registrert og kan gjenbrukes. En registrert klient kan ikke skifte identitet på samme forbindelse.
 
-Et kontrollpanel venter på svar før det sender neste forespørsel. Serveren har høyst én utestående forespørsel per sensornode. Kommer det en ny forespørsel til samme opptatte node fra et annet panel, svarer serveren med `ERROR;BUSY`. Dermed kan svaret kobles til riktig kontrollpanel uten egne forespørsels-ID-er. En avbrutt nodeforbindelse fjernes fra registeret.
+Et kontrollpanel venter på svar før det sender neste forespørsel. Serveren har høyst én utestående forespørsel per sensornode, inkludert forbindelsessjekker. Kommer det en ny forespørsel til en opptatt node, svarer serveren med `ERROR;BUSY`. Dermed kan svaret kobles til riktig forespørsel uten egne forespørsels-ID-er. En avbrutt nodeforbindelse fjernes fra registeret.
 
 ## 8. Typer og konstanter
 
@@ -64,7 +64,7 @@ Et kontrollpanel venter på svar før det sender neste forespørsel. Serveren ha
 | `value` | Endelig desimaltall med ASCII-sifre, eventuelt minustegn og punktum som desimalskilletegn. Eksempel `21.5`. |
 | `state` | `ON` eller `OFF`. |
 
-Nye typer kan legges til ved å avtale en ny typekode og tilhørende enhet eller tilstand. Temperatur og varmeovn finnes i prototypen. Luftfuktighet og vifte er planlagte typer.
+Nye typer kan legges til ved å avtale en ny typekode og tilhørende enhet eller tilstand. Nodene simulerer temperatur, luftfuktighet, varmeovn og vifte.
 
 ## 9. Meldingsformat
 
@@ -73,15 +73,18 @@ Hver melding er én UTF-8-linje på maksimalt 4096 byte før linjeskiftet. Avsen
 | Melding | Avsender → mottaker | Svar ved suksess |
 | --- | --- | --- |
 | `HELLO_NODE;<version>;<nodeId>;<token>` | Node → server | `READY;1` |
+| `HELLO_NODE;<version>;<nodeId>;<token>;HEARTBEAT` | Node → server | `READY;1` |
 | `HELLO_PANEL;<version>;<userId>;<token>` | Kontrollpanel → server | `READY;1` |
+| `PING` | Kontrollpanel → server eller server → node med `HEARTBEAT` | `PONG` tilbake til avsenderen |
 | `LIST_NODES` | Kontrollpanel → server | `NODES` etterfulgt av ett semikolonseparert felt per aktiv node-ID |
 | `LIST_DEVICES;<nodeId>` | Kontrollpanel → server → node | `DEVICES;<nodeId>` etterfulgt av ett felt per komponent |
 | `GET_READING;<nodeId>;<sensorId>` | Kontrollpanel → server → node | `READING;<nodeId>;<sensorId>;<sensorType>;<value>` |
 | `GET_ACTUATOR;<nodeId>;<actuatorId>` | Kontrollpanel → server → node | `ACTUATOR_STATE;<nodeId>;<actuatorId>;<actuatorType>;<state>` |
 | `SET_ACTUATOR;<nodeId>;<actuatorId>;<state>` | Kontrollpanel → server → node | `ACTUATOR_STATE;<nodeId>;<actuatorId>;<actuatorType>;<state>` med faktisk tilstand etter utførelse |
 | `TURN_ON_HEATER;<nodeId>;<heaterId>` | Kontrollpanel → server → node | Samme svar som `SET_ACTUATOR` med tilstand `ON` og type `HEATER` |
+| `TURN_OFF_HEATER;<nodeId>;<heaterId>` | Kontrollpanel → server → node | Samme svar som `SET_ACTUATOR` med tilstand `OFF` og type `HEATER` |
 
-`TURN_ON_HEATER` beholdes for å støtte meldingen som allerede finnes i prototypen. Noden avviser kommandoen med `UNKNOWN_ACTUATOR` hvis ID-en ikke tilhører en varmeovn. For videresendte forespørsler går svaret fra node via server til kontrollpanelet.
+De to varmeovnkommandoene beholdes for å støtte tidligere kontrollpaneler. Noden avviser kommandoen med `UNKNOWN_ACTUATOR` hvis ID-en ikke tilhører en varmeovn. For videresendte forespørsler går svaret fra node via server til kontrollpanelet.
 
 Eksempler på listesvar er `NODES;7;12` og `DEVICES;12;SENSOR:1:TEMPERATURE;ACTUATOR:3:HEATER;ACTUATOR:4:FAN`. Hvert komponentfelt har formen `kategori:id:type`. Et tomt resultat inneholder bare `NODES` eller `DEVICES;<nodeId>`, uten semikolon på slutten.
 
@@ -106,7 +109,7 @@ Feil sendes som `ERROR;<code>`. Kontrollpanelet viser en forklaring til brukeren
 | `TIMEOUT` | Noden svarer ikke innen fristen. |
 | `BAD_RESPONSE` | Noden sender et svar som er ugyldig eller ikke matcher forespørselen. |
 
-Feil under registrering avslutter forbindelsen etter feilsvaret. En ugyldig forespørsel etter registrering avvises uten å utføre handlingen. En linje som overskrider størrelsesgrensen fører til at mottakeren lukker forbindelsen. Etter tidsavbrudd eller ugyldig svar fra en node lukker serveren nodeforbindelsen, slik at et sent eller feil svar ikke kan forveksles med svaret på neste forespørsel.
+Feil under registrering avslutter forbindelsen etter feilsvaret. En ugyldig forespørsel etter registrering avvises uten å utføre handlingen. Ved brudd midt i en melding forkastes den ufullstendige linjen. En linje som overskrider størrelsesgrensen fører til at mottakeren lukker forbindelsen. Etter tidsavbrudd eller ugyldig svar fra en node lukker serveren nodeforbindelsen, slik at et sent eller feil svar ikke kan forveksles med svaret på neste forespørsel.
 
 ## 11. Eksempelscenario
 
@@ -114,7 +117,7 @@ Node 12 har temperatursensor 1 og varmeovn 3. Nodens og eierens legitimasjon er 
 
 | Fra → til | Melding |
 | --- | --- |
-| Node → server | `HELLO_NODE;1;12;node-example` |
+| Node → server | `HELLO_NODE;1;12;node-example;HEARTBEAT` |
 | Server → node | `READY;1` |
 | Kontrollpanel → server | `HELLO_PANEL;1;owner-example;panel-example` |
 | Server → kontrollpanel | `READY;1` |
@@ -125,15 +128,17 @@ Node 12 har temperatursensor 1 og varmeovn 3. Nodens og eierens legitimasjon er 
 | Kontrollpanel → server → node | `GET_READING;12;1` |
 | Node → server → kontrollpanel | `READING;12;1;TEMPERATURE;18.0` |
 | Kontrollpanel → server → node | `TURN_ON_HEATER;12;3` |
-| Node → server → kontrollpanel | `ACTUATOR;12;3;HEATER;ON` |
+| Node → server → kontrollpanel | `ACTUATOR_STATE;12;3;HEATER;ON` |
 
 Brukeren ser 18 °C og slår på ovnen. Kontrollpanelet viser ovnen som på først etter at svarmeldingen er mottatt.
 
 ## 12. Pålitelighet
 
-Serveren venter inntil 5 sekunder på svar fra noden etter videresending. Kontrollpanelet kan bruke en lengre svarfrist, for eksempel 10 sekunder, slik at serveren får anledning til å melde fra om tidsavbrudd. Ved tilkoblingsbrudd kan klienten koble til på nytt og registrere seg igjen.
-
-En kommando kan ha blitt utført selv om svaret gikk tapt. Etter gjenoppkobling bør kontrollpanelet hente status før brukeren eventuelt sender kommandoen på nytt. Av/på-kommandoer angir ønsket sluttstatus, slik at et gjentatt kall med samme verdi gir samme sluttstatus. Versjon 1 garanterer ikke at en kommando utføres nøyaktig én gang.
+- **Oppdage brudd.** Kontrollpanelet sjekker forbindelsen med `PING` i bakgrunnen. Det venter to sekunder mellom sjekkene og inntil ti sekunder på svar. Serveren prøver å sende `PING` til en node med `HEARTBEAT` etter tre sekunder og hopper over sjekken hvis noden allerede har en forespørsel. Serveren venter inntil fem sekunder på svar fra noden, og noden venter inntil femten sekunder på neste melding. Forbindelsessjekkene gjør at også et brudd uten TCP-avslutning kan oppdages når ingen bruker systemet. Eldre noder kan fortsatt bruke registreringsformatet uten `HEARTBEAT`.
+- **Koble til på nytt.** Begge klientene oppretter en ny TCP-forbindelse og sender en ny `HELLO`. Noden øker ventetiden mellom mislykkede forsøk fra ett til to og deretter fire sekunder. Den prøver også igjen ved `DUPLICATE_NODE`, slik at serveren kan få tid til å fjerne den gamle forbindelsen. Ved avvist legitimasjon kreves korrigert konfigurasjon og omstart. Simulerte målinger og aktuatorstatus blir i nodeprosessen gjennom gjenoppkoblingen.
+- **Gjenta avlesninger.** Kontrollpanelet holder én leseforespørsel om gangen og kan sende den på nytt i et vindu på femten sekunder ved tapt forbindelse, utilgjengelig node, opptatt node eller tidsavbrudd. Et påbegynt forsøk får fullføre innenfor sin svarfrist. Panelet venter et halvt sekund mellom forsøk. En ny sensoravlesning kan gi en annen verdi.
+- **Vise bufrede målinger.** Kontrollpanelet beholder de siste bekreftede verdiene for opptil 100 sensorer i minnet. Hvis en sensor fortsatt er utilgjengelig etter nye forsøk, kan panelet vise en bufret verdi med tidspunktet den ble mottatt. Målinger genereres ved forespørsel. Verdier fra tiden uten forbindelse blir derfor ikke etterfylt.
+- **Vise usikkert utfall for styring.** Panelet sender bare en styringskommando én gang. Hvis svaret går tapt, kan kommandoen allerede ha endret tilstanden. Panelet ber brukeren hente aktuell status etter gjenoppkobling, siden automatisk gjentakelse kan overstyre en nyere kommando fra et annet panel.
 
 ## 13. Sikkerhet
 

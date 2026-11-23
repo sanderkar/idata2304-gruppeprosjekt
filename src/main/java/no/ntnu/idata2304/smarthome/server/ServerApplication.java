@@ -90,7 +90,7 @@ public final class ServerApplication {
         new InputStreamReader(client.getInputStream(), StandardCharsets.UTF_8));
     var writer = new OutputStreamWriter(client.getOutputStream(), StandardCharsets.UTF_8);
 
-    String message = reader.readLine();
+    String message = Protocol.readLine(reader);
     if (message == null) {
       return;
     }
@@ -115,8 +115,11 @@ public final class ServerApplication {
   private void handleNode(Socket client, BufferedReader reader, OutputStreamWriter writer,
                           String message) throws IOException {
     final int nodeId;
+    boolean heartbeat = message.endsWith(Protocol.HEARTBEAT_SUFFIX);
+    String registrationMessage = heartbeat
+        ? message.substring(0, message.length() - Protocol.HEARTBEAT_SUFFIX.length()) : message;
     try {
-      var registration = MessageDecoder.decodeNodeRegistration(message);
+      var registration = MessageDecoder.decodeNodeRegistration(registrationMessage);
       nodeId = registration.getNodeId();
       String expectedToken = credentials.get("SMART_HOME_NODE_" + nodeId + "_TOKEN");
       if (!registration.getToken().equals(expectedToken)) {
@@ -134,16 +137,23 @@ public final class ServerApplication {
       return;
     }
 
+    Thread heartbeatThread = null;
     try {
       node.sendReady();
       System.out.println("Registered node " + nodeId);
+      if (heartbeat) {
+        heartbeatThread = Thread.startVirtualThread(node::keepAlive);
+      }
       String response;
-      while ((response = reader.readLine()) != null && node.receiveResponse(response)) {
+      while ((response = Protocol.readLine(reader)) != null && node.receiveResponse(response)) {
         // The panel thread waiting for this response handles the result
       }
     } finally {
       nodes.remove(nodeId, node);
       node.markDisconnected();
+      if (heartbeatThread != null) {
+        heartbeatThread.interrupt();
+      }
     }
   }
 
@@ -176,7 +186,7 @@ public final class ServerApplication {
 
     Protocol.writeLine(writer, "READY;1");
     String request;
-    while ((request = reader.readLine()) != null) {
+    while ((request = Protocol.readLine(reader)) != null) {
       Protocol.writeLine(writer, respondToPanel(request, userId));
     }
   }
@@ -189,6 +199,9 @@ public final class ServerApplication {
    * @return the response message to send back to the control panel
    */
   private String respondToPanel(String request, String userId) {
+    if (Protocol.PING.equals(request)) {
+      return Protocol.PONG;
+    }
     if (request.equals("LIST_NODES")) {
       var response = new StringJoiner(";").add("NODES");
       nodes.entrySet().stream()

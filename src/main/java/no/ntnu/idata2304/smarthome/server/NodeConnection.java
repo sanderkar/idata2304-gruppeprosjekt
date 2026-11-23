@@ -78,6 +78,22 @@ final class NodeConnection {
       pending.complete("ERROR;NODE_UNAVAILABLE");
     }
   }
+
+  /** Probes idle nodes using the same request slot as panel commands. */
+  void keepAlive() {
+    try {
+      while (isActive()) {
+        Thread.sleep(3_000);
+        String reply = request(Protocol.PING, Protocol.PONG::equals);
+        if (!Protocol.PONG.equals(reply) && !"ERROR;BUSY".equals(reply)) {
+          closeConnection();
+          return;
+        }
+      }
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+    }
+  }
   
   /**
    * Requests a sensor reading from the sensor node.

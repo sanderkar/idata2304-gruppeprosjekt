@@ -43,7 +43,7 @@ class ServerRoleTest {
     var server = new ServerApplication(socket, users, environment);
     var output = new ByteArrayOutputStream();
     var writer = new OutputStreamWriter(output, StandardCharsets.UTF_8);
-    var reader = new BufferedReader(new StringReader(String.join("\n", requests)));
+    var reader = new BufferedReader(new StringReader(String.join("\n", requests) + "\n"));
     server.handlePanel(reader, writer, login);
     return output.toString(StandardCharsets.UTF_8);
   }

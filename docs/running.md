@@ -42,6 +42,23 @@ off 12 1
 exit
 ```
 
+## Demonstrate recovery after an outage
+
+1. Run the three applications. In the panel, run `read 12 1` and `on 12 2` to
+   save a temperature reading and turn on the fan.
+2. Stop only the server. Leave the sensor node and panel running. Check that
+   the panel reports the interrupted connection.
+3. Enter `read 12 1` while the server is down. Leave it down through the retry
+   window to see the last confirmed reading and its timestamp. Enter the same
+   command again and restart the server while the command is waiting to see it
+   return a fresh reading.
+4. Run `list` and `status 12 2` after the clients reconnect. Node 12 will
+   appear again and its fan will still be on.
+
+If the connection drops during an actuator command, check the status after
+recovery before issuing another command. An already-executed command may have
+lost its reply.
+
 ## Other nodes and users
 
 Pass a node ID as the sensor application's first program argument. For node `13`,
