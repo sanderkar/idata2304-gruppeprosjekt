@@ -113,12 +113,9 @@ final class NodeConnection {
    */
   
   String requestActuatorState(ActuatorRequest request) {
-    String onReply = heaterStateReply(request.nodeId(), request.actuatorId(), "ON");
-    String offReply = heaterStateReply(request.nodeId(), request.actuatorId(), "OFF");
-
-    String command;
-    command = "GET_ACTUATOR;" + request.nodeId() + ";" + request.actuatorId();
-    return request(command, reply -> reply.equals(onReply) || reply.equals(offReply));
+    String actuatorAddress = request.nodeId() + ";" + request.actuatorId();
+    String replyPattern = "ACTUATOR_STATE;" + actuatorAddress + ";[A-Z][A-Z0-9_]*;(ON|OFF)";
+    return request("GET_ACTUATOR;" + actuatorAddress, reply -> reply.matches(replyPattern));
   }
   
   /**

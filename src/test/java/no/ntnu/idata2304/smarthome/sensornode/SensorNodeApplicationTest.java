@@ -135,11 +135,17 @@ public class SensorNodeApplicationTest {
 
     assertEquals("ACTUATOR_STATE;12;2;FAN;ON", onResponse);
     assertTrue(fan.isOn());
+    assertEquals("ACTUATOR_STATE;12;2;FAN;ON",
+        SensorNodeApplication.respondToCommand("GET_ACTUATOR;12;2", node, heater));
+    assertEquals("ACTUATOR_STATE;12;1;HEATER;OFF",
+        SensorNodeApplication.respondToCommand("GET_ACTUATOR;12;1", node, heater));
 
     String offResponse = SensorNodeApplication.respondToCommand(
         "SET_ACTUATOR;12;2;OFF", node, heater);
 
     assertEquals("ACTUATOR_STATE;12;2;FAN;OFF", offResponse);
     assertFalse(fan.isOn());
+    assertEquals("ACTUATOR_STATE;12;2;FAN;OFF",
+        SensorNodeApplication.respondToCommand("GET_ACTUATOR;12;2", node, heater));
   }
 }

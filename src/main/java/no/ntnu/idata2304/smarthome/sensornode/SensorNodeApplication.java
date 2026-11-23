@@ -153,11 +153,14 @@ public final class SensorNodeApplication {
           if (status.nodeId() != nodeId) {
             return "ERROR;WRONG_NODE";
           }
-          if (status.actuatorId() != heater.getHeaterId()) {
+          var actuator = node.findActuator(status.actuatorId());
+          if (actuator == null) {
             return "ERROR;UNKNOWN_ACTUATOR";
           }
-          return "ACTUATOR_STATE;" + nodeId + ";" + heater.getHeaterId()
-              + ";HEATER;" + (heater.isOn() ? "ON" : "OFF");
+          return "ACTUATOR_STATE;" + nodeId
+              + ";" + actuator.getActuatorId()
+              + ";" + actuator.getType()
+              + ";" + (actuator.isOn() ? "ON" : "OFF");
         }
 
       }
