@@ -1,9 +1,6 @@
 package no.ntnu.idata2304.smarthome.common.protocol;
 
-/**
- * Represents a registration message for a sensor node.
- */
-
+/** Represents a registration message for a sensor node. */
 public class NodeRegistration {
 
   private final int nodeId;
@@ -37,5 +34,4 @@ public class NodeRegistration {
   public String getToken() {
     return token;
   }
-
 }
