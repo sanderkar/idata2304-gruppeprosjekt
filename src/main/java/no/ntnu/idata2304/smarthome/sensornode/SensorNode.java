@@ -77,6 +77,38 @@ public class SensorNode {
   }
 
   /**
+   * Turns on the actuator with the specified ID.
+   *
+   * @param actuatorId the actuator ID
+   * @return true if the actuator was found and turned on, false otherwise
+   */
+  public boolean turnOnActuator(int actuatorId) {
+    Actuator actuator = findActuator(actuatorId);
+    if (actuator == null) {
+      return false;
+    }
+
+    actuator.turnOn();
+    return true;
+  }
+
+  /**
+   * Turns off the actuator with the specified ID.
+   *
+   * @param actuatorId the actuator ID
+   * @return true if the actuator was found and turned off, false otherwise
+   */
+  public boolean turnOffActuator(int actuatorId) {
+    Actuator actuator = findActuator(actuatorId);
+    if (actuator == null) {
+      return false;
+    }
+
+    actuator.turnOff();
+    return true;
+  }
+
+  /**
    * Returns the unique identifier for the sensor node.
    *
    * @return the node ID

@@ -77,13 +77,13 @@ Hver melding er én UTF-8-linje på maksimalt 4096 byte før linjeskiftet. Avsen
 | `LIST_NODES` | Kontrollpanel → server | `NODES` etterfulgt av ett semikolonseparert felt per aktiv node-ID |
 | `LIST_DEVICES;<nodeId>` | Kontrollpanel → server → node | `DEVICES;<nodeId>` etterfulgt av ett felt per komponent |
 | `GET_READING;<nodeId>;<sensorId>` | Kontrollpanel → server → node | `READING;<nodeId>;<sensorId>;<sensorType>;<value>` |
-| `GET_ACTUATOR;<nodeId>;<actuatorId>` | Kontrollpanel → server → node | `ACTUATOR;<nodeId>;<actuatorId>;<actuatorType>;<state>` |
-| `SET_ACTUATOR;<nodeId>;<actuatorId>;<state>` | Kontrollpanel → server → node | `ACTUATOR;<nodeId>;<actuatorId>;<actuatorType>;<state>` med faktisk tilstand etter utførelse |
+| `GET_ACTUATOR;<nodeId>;<actuatorId>` | Kontrollpanel → server → node | `ACTUATOR_STATE;<nodeId>;<actuatorId>;<actuatorType>;<state>` |
+| `SET_ACTUATOR;<nodeId>;<actuatorId>;<state>` | Kontrollpanel → server → node | `ACTUATOR_STATE;<nodeId>;<actuatorId>;<actuatorType>;<state>` med faktisk tilstand etter utførelse |
 | `TURN_ON_HEATER;<nodeId>;<heaterId>` | Kontrollpanel → server → node | Samme svar som `SET_ACTUATOR` med tilstand `ON` og type `HEATER` |
 
 `TURN_ON_HEATER` beholdes for å støtte meldingen som allerede finnes i prototypen. Noden avviser kommandoen med `UNKNOWN_ACTUATOR` hvis ID-en ikke tilhører en varmeovn. For videresendte forespørsler går svaret fra node via server til kontrollpanelet.
 
-Eksempler på listesvar er `NODES;7;12` og `DEVICES;12;SENSOR:1:TEMPERATURE;ACTUATOR:3:HEATER`. Hvert komponentfelt har formen `kategori:id:type`. Et tomt resultat inneholder bare `NODES` eller `DEVICES;<nodeId>`, uten semikolon på slutten.
+Eksempler på listesvar er `NODES;7;12` og `DEVICES;12;SENSOR:1:TEMPERATURE;ACTUATOR:3:HEATER;ACTUATOR:4:FAN`. Hvert komponentfelt har formen `kategori:id:type`. Et tomt resultat inneholder bare `NODES` eller `DEVICES;<nodeId>`, uten semikolon på slutten.
 
 ## 10. Feilhåndtering
 

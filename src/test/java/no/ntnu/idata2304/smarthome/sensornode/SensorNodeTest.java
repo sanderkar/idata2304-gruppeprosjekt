@@ -5,6 +5,7 @@ import no.ntnu.idata2304.smarthome.sensornode.actuator.Heater;
 import no.ntnu.idata2304.smarthome.sensornode.sensor.TemperatureSensor;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder;
 import org.junit.jupiter.api.Test;
+import no.ntnu.idata2304.smarthome.sensornode.actuator.Fan;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -270,4 +271,31 @@ public class SensorNodeTest {
     assertSame(sensor1, node.getSensors().get(0));
   }
 
+  @Test
+  void canControlFanThroughGenericActuatorMethods() {
+    SensorNode node = new SensorNode(1);
+    Fan fan = new Fan(10);
+    node.addActuator(fan);
+
+    assertTrue(node.turnOnActuator(10));
+    assertTrue(fan.isOn());
+
+    assertTrue(node.turnOffActuator(10));
+    assertFalse(fan.isOn());
+  }
+
+  @Test
+  void multipleDifferentActuatorsCanRunAtTheSameTime() {
+    SensorNode node = new SensorNode(1);
+    Heater heater = new Heater(10);
+    Fan fan = new Fan(20);
+    node.addActuator(heater);
+    node.addActuator(fan);
+
+    assertTrue(node.turnOnActuator(10));
+    assertTrue(node.turnOnActuator(20));
+
+    assertTrue(heater.isOn());
+    assertTrue(fan.isOn());
+  }
 }

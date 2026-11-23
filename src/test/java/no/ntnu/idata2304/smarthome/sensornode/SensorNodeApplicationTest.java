@@ -3,6 +3,7 @@ package no.ntnu.idata2304.smarthome.sensornode;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Heater;
 import no.ntnu.idata2304.smarthome.sensornode.sensor.TemperatureSensor;
 import no.ntnu.idata2304.smarthome.sensornode.sensor.SensorFactory;
+import no.ntnu.idata2304.smarthome.sensornode.actuator.Fan;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,6 +19,7 @@ public class SensorNodeApplicationTest {
     node.addSensor(temperature);
     node.addSensor(SensorFactory.create("HUMIDITY", 2, 50));
     var heater = new Heater(1);
+    node.addHeater(heater);
     assertEquals("DEVICES;12;SENSOR:1:TEMPERATURE;SENSOR:2:HUMIDITY;ACTUATOR:1:HEATER",
         SensorNodeApplication.respondToCommand("LIST_DEVICES;12", node, heater));
     String reading = SensorNodeApplication.respondToCommand("GET_READING;12;2", node, heater);
@@ -36,6 +38,7 @@ public class SensorNodeApplicationTest {
     SensorNode node = new SensorNode(12);
     node.addSensor(new TemperatureSensor(1, 22.0));
     Heater heater = new Heater(1);
+    node.addHeater(heater);
 
     String response = SensorNodeApplication.respondToCommand(
         "LIST_DEVICES;12", node, heater);
@@ -118,5 +121,25 @@ public class SensorNodeApplicationTest {
 
     assertEquals("ERROR;BAD_FORMAT",
         SensorNodeApplication.respondToCommand("OPEN_WINDOW;12;1", node, heater));
+  }
+  @Test
+  void setActuatorTurnsFanOnAndOff() {
+    SensorNode node = new SensorNode(12);
+    Heater heater = new Heater(1);
+    Fan fan = new Fan(2);
+    node.addHeater(heater);
+    node.addActuator(fan);
+
+    String onResponse = SensorNodeApplication.respondToCommand(
+        "SET_ACTUATOR;12;2;ON", node, heater);
+
+    assertEquals("ACTUATOR_STATE;12;2;FAN;ON", onResponse);
+    assertTrue(fan.isOn());
+
+    String offResponse = SensorNodeApplication.respondToCommand(
+        "SET_ACTUATOR;12;2;OFF", node, heater);
+
+    assertEquals("ACTUATOR_STATE;12;2;FAN;OFF", offResponse);
+    assertFalse(fan.isOn());
   }
 }

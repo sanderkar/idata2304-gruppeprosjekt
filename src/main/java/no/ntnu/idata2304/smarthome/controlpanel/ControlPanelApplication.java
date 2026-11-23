@@ -2,10 +2,7 @@ package no.ntnu.idata2304.smarthome.controlpanel;
 
 import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
 import no.ntnu.idata2304.smarthome.common.model.SensorType;
-import no.ntnu.idata2304.smarthome.common.protocol.MessageEncoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
-import no.ntnu.idata2304.smarthome.common.protocol.TurnOffHeaterCommand;
-import no.ntnu.idata2304.smarthome.common.protocol.TurnOnHeaterCommand;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -21,8 +18,8 @@ import java.util.Scanner;
 public final class ControlPanelApplication {
 
   private static final String USAGE =
-      "Commands: list | read <node ID> <sensor ID> | on <node ID> <heater ID> "
-          + "| off <node ID> <heater ID> | status <node ID> <actuator ID> | exit";
+      "Commands: list | read <node ID> <sensor ID> | on <node ID> <actuator ID> "
+          + "| off <node ID> <actuator ID> | status <node ID> <actuator ID> | exit";
   private static final String ID = "[0-9]{1,9}";
 
   /**
@@ -111,8 +108,8 @@ public final class ControlPanelApplication {
     int deviceId = Integer.parseInt(command[2]);
     return switch (command[0]) {
       case "read" -> "GET_READING;" + nodeId + ";" + deviceId;
-      case "on" -> MessageEncoder.encodeTurnOnHeater(new TurnOnHeaterCommand(nodeId, deviceId));
-      case "off" -> MessageEncoder.encodeTurnOffHeater(new TurnOffHeaterCommand(nodeId, deviceId));
+      case "on" -> "SET_ACTUATOR;" + nodeId + ";" + deviceId + ";ON";
+      case "off" -> "SET_ACTUATOR;" + nodeId + ";" + deviceId + ";OFF";
       case "status" -> "GET_ACTUATOR;" + nodeId + ";" + deviceId;
       default -> null;
     };
