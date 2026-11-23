@@ -34,17 +34,17 @@ done
 mkdir -p target
 work="$(mktemp -d "$root/target/local-demo.XXXXXXXX")"
 server_pid=
-node_pid=
+node_pids=()
 panel_pid=
 
 cleanup() {
   trap '' INT TERM
-  for pid in "$panel_pid" "$node_pid" "$server_pid"; do
+  for pid in "$panel_pid" "${node_pids[@]-}" "$server_pid"; do
     if [[ -n "$pid" ]]; then
       kill "$pid" 2>/dev/null || true
     fi
   done
-  for pid in "$panel_pid" "$node_pid" "$server_pid"; do
+  for pid in "$panel_pid" "${node_pids[@]-}" "$server_pid"; do
     if [[ -n "$pid" ]]; then
       wait "$pid" 2>/dev/null || true
     fi
@@ -73,17 +73,19 @@ cd "$work"
 
 echo "Preparing a private local TLS certificate..."
 SMART_HOME_DEMO_KEYSTORE_PASSWORD="$(random_secret)"
-node_token="$(random_secret)"
+node_12_token="$(random_secret)"
+node_13_token="$(random_secret)"
 panel_token="$(random_secret)"
 export SMART_HOME_DEMO_KEYSTORE_PASSWORD
 cat > config/local.properties <<EOF
 SMART_HOME_HOST=127.0.0.1
 SMART_HOME_PORT=$port
 SMART_HOME_TLS_KEYSTORE_PASSWORD=$SMART_HOME_DEMO_KEYSTORE_PASSWORD
-SMART_HOME_NODE_12_TOKEN=$node_token
+SMART_HOME_NODE_12_TOKEN=$node_12_token
+SMART_HOME_NODE_13_TOKEN=$node_13_token
 SMART_HOME_PANEL_TOKEN=$panel_token
 EOF
-unset node_token panel_token
+unset node_12_token node_13_token panel_token
 
 if ! {
   "$keytool" -genkeypair -alias smart-home-server -keyalg EC -groupname secp256r1 \
@@ -120,16 +122,21 @@ wait_for_start() {
 }
 
 package=no.ntnu.idata2304.smarthome
-touch server.log node.log
+touch server.log
 "$java" -cp classes "$package.server.ServerApplication" > server.log 2>&1 &
 server_pid=$!
 wait_for_start Server "$server_pid" server.log "Server started at "
 
-"$java" -cp classes "$package.sensornode.SensorNodeApplication" > node.log 2>&1 &
-node_pid=$!
-wait_for_start "Sensor node" "$node_pid" node.log "Received response from server: READY;1"
+for node_id in 12 13; do
+  node_log="node-$node_id.log"
+  touch "$node_log"
+  "$java" -cp classes "$package.sensornode.SensorNodeApplication" "$node_id" > "$node_log" 2>&1 &
+  node_pid=$!
+  node_pids+=("$node_pid")
+  wait_for_start "Sensor node $node_id" "$node_pid" "$node_log" "Received response from server: READY;1"
+done
 
-echo "Ready. Try 'list' or 'read 12 1'. Type 'exit' to stop all three apps."
+echo "Nodes 12 and 13 are ready. Try 'list' or 'read 13 3'. Type 'exit' to stop the demo."
 exec 3<&0
 "$java" -cp classes "$package.controlpanel.ControlPanelApplication" <&3 3<&- &
 panel_pid=$!
