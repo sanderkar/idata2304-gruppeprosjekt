@@ -61,7 +61,23 @@ The server authenticates clients, applies role permissions, and routes requests.
 Sensor nodes simulate readings and actuator state.
 The control panel discovers nodes, displays readings and anomaly warnings, and sends commands to specific devices.
 
-The [protocol specification](docs/protocol.md) describes the message formats, registration, permissions, and error handling.
+![System architecture showing the control panel and sensor node connecting to the broker over TLS, with a registry for assigned node addresses](docs/diagrams/rendered/01-architecture.svg)
+
+<details open>
+<summary>Sensor node classes</summary>
+
+[![Class diagram showing how the sensor and actuator factories create the devices attached to a sensor node](docs/diagrams/rendered/02-sensor-node-classes.svg)](docs/diagrams/rendered/02-sensor-node-classes.svg)
+
+</details>
+
+<details open>
+<summary>Reading a sensor and controlling a fan</summary>
+
+![Sequence diagram showing a sensor read, a fan command, and the reply when the server denies permission](docs/diagrams/rendered/03-read-and-control.svg)
+
+</details>
+
+The [protocol specification](docs/protocol.md) describes the message formats, registration, permissions, and error handling. The [diagram index](docs/diagrams/index.md) links to the PlantUML sources.
 
 ## Networking extras
 
@@ -69,6 +85,13 @@ The [protocol specification](docs/protocol.md) describes the message formats, re
 
 Nodes and panels reconnect automatically.
 The panel retries interrupted reads and can show a timestamped cached reading during a longer outage.
+
+<details open>
+<summary>Control panel connection recovery</summary>
+
+![Sequence diagram showing a failed connection, background retries, a new TLS handshake, and panel re-registration](docs/diagrams/rendered/05-panel-connection-recovery.svg)
+
+</details>
 
 ### Encrypted transport
 
@@ -78,6 +101,13 @@ Clients verify the server’s certificate and address before sending login token
 ### Automatic node addresses
 
 The server assigns unique numeric addresses to provisioned nodes and saves the assignments across reconnects and server restarts.
+
+<details open>
+<summary>Automatic node registration</summary>
+
+![Sequence diagram showing token validation and how the server assigns a new node address or returns a saved one](docs/diagrams/rendered/04-automatic-node-registration.svg)
+
+</details>
 
 ## How to run tests
 
