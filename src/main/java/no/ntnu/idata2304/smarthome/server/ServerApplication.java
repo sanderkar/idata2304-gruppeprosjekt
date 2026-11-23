@@ -203,6 +203,8 @@ public final class ServerApplication {
       return;
     }
 
+    // Start a virtual thread to handle the node's communication and heartbeat
+
     Thread heartbeatThread = null;
     try {
       node.sendReady(registrationReply);
