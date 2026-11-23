@@ -3,6 +3,7 @@ package no.ntnu.idata2304.smarthome.server;
 import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
+import no.ntnu.idata2304.smarthome.common.security.TlsContexts;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,6 +20,8 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLSocket;
 
 /**
  * Entry point for the server application.
@@ -35,10 +38,27 @@ public final class ServerApplication {
   }
 
   public ServerApplication(String host, int port) throws IOException {
+    this(host, port, LocalConfiguration.loadCredentials());
+  }
+
+  private ServerApplication(String host, int port, Map<String, String> configuration)
+      throws IOException {
     this.panelUsers = LocalConfiguration.loadPanelUsers();
-    this.credentials = LocalConfiguration.loadCredentials();
-    this.serverSocket = new ServerSocket();
-    this.serverSocket.bind(new InetSocketAddress(host, port));
+    this.credentials = configuration;
+    var listener = (SSLServerSocket)
+        TlsContexts.forServer(configuration).getServerSocketFactory().createServerSocket();
+    listener.setEnabledProtocols(new String[] {TlsContexts.PROTOCOL});
+    try {
+      listener.bind(new InetSocketAddress(host, port));
+    } catch (IOException | RuntimeException exception) {
+      try {
+        listener.close();
+      } catch (IOException closeFailure) {
+        exception.addSuppressed(closeFailure);
+      }
+      throw exception;
+    }
+    this.serverSocket = listener;
   }
 
   /** Supplies configuration and a socket for isolated tests  */
@@ -56,15 +76,16 @@ public final class ServerApplication {
    */
 
    static void main(String[] args) throws IOException {
-     var serverAddress = LocalConfiguration.loadServerAddress();
+     var configuration = LocalConfiguration.loadCredentials();
+     var serverAddress = LocalConfiguration.loadServerAddress(configuration);
      ServerApplication server =
-         new ServerApplication(serverAddress.host(), serverAddress.port());
+         new ServerApplication(serverAddress.host(), serverAddress.port(), configuration);
      System.out.println("Server started at " + serverAddress.host() + ":"
-         + serverAddress.port() + ". Waiting for clients to connect...");
+         + serverAddress.port() + " using " + TlsContexts.PROTOCOL + ".");
 
     try (ServerSocket listener = server.serverSocket) {
       while (true) {
-        Socket client = listener.accept();
+        var client = (SSLSocket) listener.accept();
 
         Thread.startVirtualThread(() -> {
           try (client) {
@@ -84,8 +105,11 @@ public final class ServerApplication {
    * @throws IOException if an I/O error occurs during communication
    */
 
-  private void handleClient(Socket client) throws IOException {
-    System.out.println("Client connected: " + client.getInetAddress().getHostAddress());
+  private void handleClient(SSLSocket client) throws IOException {
+    client.setSoTimeout(5_000);
+    client.startHandshake();
+    System.out.println("Client connected over " + client.getSession().getProtocol()
+        + ": " + client.getInetAddress().getHostAddress());
     var reader = new BufferedReader(
         new InputStreamReader(client.getInputStream(), StandardCharsets.UTF_8));
     var writer = new OutputStreamWriter(client.getOutputStream(), StandardCharsets.UTF_8);
@@ -94,6 +118,7 @@ public final class ServerApplication {
     if (message == null) {
       return;
     }
+    client.setSoTimeout(0);
 
     switch (message.split(";", 2)[0]) {
       case "HELLO_NODE" -> handleNode(client, reader, writer, message);

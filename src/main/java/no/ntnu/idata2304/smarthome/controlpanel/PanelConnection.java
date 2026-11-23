@@ -5,6 +5,8 @@ import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLSocketFactory;
 import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration.ServerAddress;
 import no.ntnu.idata2304.smarthome.common.network.ClientConnection;
 import no.ntnu.idata2304.smarthome.common.network.ClientConnection.RegistrationRejected;
@@ -15,15 +17,18 @@ final class PanelConnection implements AutoCloseable {
   static final String SERVER_UNAVAILABLE = "ERROR;SERVER_UNAVAILABLE";
   private static final long READ_RETRY_WINDOW = Duration.ofSeconds(15).toNanos();
   private final ServerAddress address;
+  private final SSLSocketFactory sockets;
   private final String hello;
   private final ScheduledExecutorService maintenance =
       Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().factory());
   private ClientConnection connection;
   private String registrationError;
   private boolean recovering;
+  private boolean reportedHandshakeFailure;
 
-  PanelConnection(ServerAddress address, String hello) {
+  PanelConnection(ServerAddress address, SSLSocketFactory sockets, String hello) {
     this.address = address;
+    this.sockets = sockets;
     this.hello = hello;
   }
 
@@ -50,7 +55,8 @@ final class PanelConnection implements AutoCloseable {
     }
     try {
       if (connection == null) {
-        connection = ClientConnection.connect(address, hello, 10_000);
+        connection = ClientConnection.connect(address, sockets, hello, 10_000);
+        reportedHandshakeFailure = false;
         if (recovering) {
           System.out.println("Control panel reconnected to the server.");
           recovering = false;
@@ -64,6 +70,12 @@ final class PanelConnection implements AutoCloseable {
           "Panel registration failed: "
               + registrationError
               + ". Check the selected account and server credentials.");
+    } catch (SSLHandshakeException exception) {
+      if (!reportedHandshakeFailure) {
+        System.err.println("TLS handshake failed. Check the server certificate and SMART_HOME_HOST.");
+        reportedHandshakeFailure = true;
+      }
+      disconnect();
     } catch (IOException exception) {
       disconnect();
     }

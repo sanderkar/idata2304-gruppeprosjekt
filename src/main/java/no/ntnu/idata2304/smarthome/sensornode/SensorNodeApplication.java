@@ -3,11 +3,13 @@ package no.ntnu.idata2304.smarthome.sensornode;
 import java.io.IOException;
 import java.util.Locale;
 import java.util.StringJoiner;
+import javax.net.ssl.SSLHandshakeException;
 import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
 import no.ntnu.idata2304.smarthome.common.network.ClientConnection;
 import no.ntnu.idata2304.smarthome.common.network.ClientConnection.RegistrationRejected;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
+import no.ntnu.idata2304.smarthome.common.security.TlsContexts;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Fan;
 import no.ntnu.idata2304.smarthome.sensornode.actuator.Heater;
 import no.ntnu.idata2304.smarthome.sensornode.sensor.SensorFactory;
@@ -28,7 +30,8 @@ public final class SensorNodeApplication {
   static void main(String[] args) throws IOException, InterruptedException {
     int nodeId = args.length == 0 ? 12 : Integer.parseInt(args[0]);
     String tokenName = "SMART_HOME_NODE_" + nodeId + "_TOKEN";
-    String token = LocalConfiguration.loadCredentials().get(tokenName);
+    var configuration = LocalConfiguration.loadCredentials();
+    String token = configuration.get(tokenName);
     if (nodeId < 0 || token == null || !token.matches("[A-Za-z0-9._-]{1,128}")) {
       System.err.println(
           "Provide a non-negative node ID and set "
@@ -37,7 +40,8 @@ public final class SensorNodeApplication {
       return;
     }
 
-    var serverAddress = LocalConfiguration.loadServerAddress();
+    var serverAddress = LocalConfiguration.loadServerAddress(configuration);
+    var sockets = TlsContexts.forClient(configuration).getSocketFactory();
     String hello = "HELLO_NODE;1;" + nodeId + ";" + token + Protocol.HEARTBEAT_SUFFIX;
     var node = new SensorNode(nodeId);
     var heater = new Heater(1);
@@ -47,12 +51,14 @@ public final class SensorNodeApplication {
     node.addActuator(new Fan(2));
 
     long retryDelay = 1_000;
+    boolean reportedHandshakeFailure = false;
     while (!Thread.currentThread().isInterrupted()) {
-      try (var server = ClientConnection.connect(serverAddress, hello, 15_000)) {
+      try (var server = ClientConnection.connect(serverAddress, sockets, hello, 15_000)) {
         System.out.println("Connected to server at " + serverAddress.host() + ":"
             + serverAddress.port());
         System.out.println("Received response from server: READY;1");
         retryDelay = 1_000;
+        reportedHandshakeFailure = false;
         while (!Thread.currentThread().isInterrupted()) {
           String command = server.read();
           server.send(Protocol.PING.equals(command)
@@ -64,6 +70,11 @@ public final class SensorNodeApplication {
           System.err.println("Node registration failed: " + exception.getMessage()
               + ". Check " + tokenName + " against the server configuration.");
           return;
+        }
+      } catch (SSLHandshakeException exception) {
+        if (!reportedHandshakeFailure) {
+          System.err.println("TLS handshake failed. Check the server certificate and SMART_HOME_HOST.");
+          reportedHandshakeFailure = true;
         }
       } catch (IOException exception) {
         // Retry after a failed connection, a closed session or a missed heartbeat.

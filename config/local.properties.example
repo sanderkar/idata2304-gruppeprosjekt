@@ -6,6 +6,11 @@
 
 SMART_HOME_HOST=127.0.0.1
 SMART_HOME_PORT=5000
+# Server only. Use the password chosen when creating the keystore.
+SMART_HOME_TLS_KEYSTORE_PASSWORD=replace-with-keystore-password
+# Optional path overrides. Paths are relative to the project root.
+# SMART_HOME_TLS_KEYSTORE=config/tls/server.p12
+# SMART_HOME_TLS_CERTIFICATE=config/tls/server.crt
 SMART_HOME_NODE_12_TOKEN=replace-with-node-token
 SMART_HOME_PANEL_TOKEN=replace-with-owner-token
 SMART_HOME_SHA_TOKEN=replace-with-sha-token

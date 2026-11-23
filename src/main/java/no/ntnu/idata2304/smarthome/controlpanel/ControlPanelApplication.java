@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.Scanner;
 import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
 import no.ntnu.idata2304.smarthome.common.model.SensorType;
+import no.ntnu.idata2304.smarthome.common.security.TlsContexts;
 
 /** Console client for listing nodes and requesting sensor readings. */
 public final class ControlPanelApplication {
@@ -36,7 +37,8 @@ public final class ControlPanelApplication {
       System.err.println("Unknown panel user. Check config/panel-users.properties.");
       return;
     }
-    String token = LocalConfiguration.loadCredentials().get(tokenName);
+    var configuration = LocalConfiguration.loadCredentials();
+    String token = configuration.get(tokenName);
     if (token == null || !token.matches("[A-Za-z0-9._-]{1,128}")) {
       System.err.println(
           "Set "
@@ -45,8 +47,10 @@ public final class ControlPanelApplication {
       return;
     }
 
-    var serverAddress = LocalConfiguration.loadServerAddress();
-    try (var server = new PanelConnection(serverAddress, "HELLO_PANEL;1;" + userId + ";" + token);
+    var serverAddress = LocalConfiguration.loadServerAddress(configuration);
+    var sockets = TlsContexts.forClient(configuration).getSocketFactory();
+    try (var server = new PanelConnection(
+            serverAddress, sockets, "HELLO_PANEL;1;" + userId + ";" + token);
         Scanner console = new Scanner(System.in, StandardCharsets.UTF_8)) {
       if (!server.start()) {
         return;

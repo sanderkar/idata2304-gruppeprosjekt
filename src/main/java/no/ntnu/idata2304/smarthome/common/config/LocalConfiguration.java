@@ -28,7 +28,7 @@ public final class LocalConfiguration {
    * @return a ServerAddress object containing the host and port
    * @throws IllegalArgumentException if the host is blank or the port is invalid
    */
-  static ServerAddress loadServerAddress(Map<String, String> configuration) {
+  public static ServerAddress loadServerAddress(Map<String, String> configuration) {
     String host = configuration.getOrDefault("SMART_HOME_HOST", "127.0.0.1");
     String portValue = configuration.getOrDefault("SMART_HOME_PORT", "5000");
 

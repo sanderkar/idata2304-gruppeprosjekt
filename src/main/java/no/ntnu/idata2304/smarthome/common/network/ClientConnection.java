@@ -9,8 +9,11 @@ import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration.ServerAddress;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
+import no.ntnu.idata2304.smarthome.common.security.TlsContexts;
 
 /** A registered client socket with bounded connect and read times. */
 public final class ClientConnection implements Closeable {
@@ -26,20 +29,32 @@ public final class ClientConnection implements Closeable {
     writer = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8);
   }
 
-  /** Opens a connection and completes registration before returning it. */
-  public static ClientConnection connect(ServerAddress address, String hello, int readTimeout)
+  /** Verifies the TLS peer and completes registration before returning the connection. */
+  public static ClientConnection connect(
+      ServerAddress address, SSLSocketFactory factory, String hello, int readTimeout)
       throws IOException {
-    var socket = new Socket();
+    var tcp = new Socket();
+    Socket socket = tcp;
     try {
-      socket.connect(new InetSocketAddress(address.host(), address.port()), 2_000);
-      socket.setSoTimeout(3_000);
-      var connection = new ClientConnection(socket);
+      tcp.connect(new InetSocketAddress(address.host(), address.port()), 2_000);
+      var tls = (SSLSocket) factory.createSocket(tcp, address.host(), address.port(), true);
+      socket = tls;
+      var parameters = tls.getSSLParameters();
+      parameters.setProtocols(new String[] {TlsContexts.PROTOCOL});
+      // JSSE's HTTPS identity algorithm verifies the DNS name or IP, even for non-HTTP protocols.
+      parameters.setEndpointIdentificationAlgorithm("HTTPS");
+      tls.setSSLParameters(parameters);
+      tls.setSoTimeout(5_000);
+      tls.startHandshake();
+
+      tls.setSoTimeout(3_000);
+      var connection = new ClientConnection(tls);
       connection.send(hello);
       String registration = connection.read();
       if (!"READY;1".equals(registration)) {
         throw new RegistrationRejected(registration);
       }
-      socket.setSoTimeout(readTimeout);
+      tls.setSoTimeout(readTimeout);
       return connection;
     } catch (IOException | RuntimeException exception) {
       try {

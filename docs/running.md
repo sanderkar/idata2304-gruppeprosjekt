@@ -17,7 +17,37 @@ otherwise different overrides can cause authentication failures.
 The server address is configured with `SMART_HOME_HOST` and `SMART_HOME_PORT`.
 The defaults are `127.0.0.1` and `5000`. Set the same values for the server,
 sensor nodes and control panels. When running on different machines, use the
-server machine's reachable IP address instead of `127.0.0.1`.
+server machine's reachable IP address or DNS name from the clients.
+
+### Set up TLS
+
+All connections use TLS 1.3. From the project root, use the Java 25 `keytool`
+to create a local server identity and export its public certificate:
+
+```sh
+mkdir -p config/tls
+keytool -genkeypair -alias smart-home-server -keyalg EC -groupname secp256r1 \
+  -storetype PKCS12 -keystore config/tls/server.p12 -validity 365 \
+  -dname "CN=Smart Home Server" -ext "SAN=dns:localhost,ip:127.0.0.1" \
+  -ext "EKU=serverAuth"
+keytool -exportcert -alias smart-home-server -keystore config/tls/server.p12 \
+  -rfc -file config/tls/server.crt
+```
+
+Enter the keystore password when prompted. Set
+`SMART_HOME_TLS_KEYSTORE_PASSWORD` on the server to the same value. Add this
+setting to your existing `config/local.properties` if you already have one.
+The server's default keystore path is `config/tls/server.p12`. Clients load
+`config/tls/server.crt`. Use `SMART_HOME_TLS_KEYSTORE` and
+`SMART_HOME_TLS_CERTIFICATE` to override those paths.
+
+For a demo across machines, include the server address used by the clients in
+the certificate's SAN. For example, add `ip:192.168.1.20` or `dns:sha.example`
+to the comma-separated SAN list before generating the certificate. Copy
+`server.crt` to both client machines over a trusted channel. Keep `server.p12`
+and its password on the server. The generated TLS files are ignored by Git.
+When replacing the certificate, distribute the new public certificate and
+restart the affected applications.
 
 ## Start the applications
 
@@ -29,7 +59,10 @@ Run these main classes in this order, keeping the first two running:
 
 The default node is `12`, with temperature sensor `1` and heater `1`. The default
 panel user is `owner-example`. By default, the applications communicate on `127.0.0.1:5000`.
-The node should receive `READY;1`; the panel should display its command menu.
+The node should receive `READY;1` and the panel should display its command menu.
+The server logs `Client connected over TLSv1.3` for each successful handshake.
+If a client reports a TLS handshake error, verify its public certificate and
+that `SMART_HOME_HOST` matches the certificate.
 
 Try these commands in the control panel:
 

@@ -4,7 +4,7 @@
 
 Dette dokumentet beskriver protokollen mellom sensornoder, kontrollpaneler og en mellomserver i SHA. Kontrollpanelet kan finne tilkoblede noder, hente målinger og aktuatorstatus og styre en bestemt aktuator.
 
-Versjon 1 støtter registrering, tilgangskontroll, avlesning og styring av simulerte enheter. Klientene kobler seg til på nytt ved midlertidige nettverksbrudd.
+Versjon 1 støtter registrering, tilgangskontroll, avlesning og styring av simulerte enheter. Trafikken er kryptert med TLS 1.3. Klientene kobler seg til på nytt ved midlertidige nettverksbrudd.
 
 ## 2. Terminologi
 
@@ -20,7 +20,7 @@ Versjon 1 støtter registrering, tilgangskontroll, avlesning og styring av simul
 
 ## 3. Transport
 
-Protokollen bruker TCP. TCP leverer en ordnet strøm av byte, slik at applikasjonen kan lese en forespørsel og tilhørende svar i rekkefølge. Applikasjonen avgrenser selv meldingene med linjeskift. Et TCP-brudd kan fortsatt gjøre utfallet av en kommando ukjent.
+Protokollen bruker TLS 1.3 over TCP. TCP leverer en ordnet strøm av byte, slik at applikasjonen kan lese en forespørsel og tilhørende svar i rekkefølge. TLS beskytter denne strømmen under transport. Applikasjonen avgrenser meldingene med linjeskift inne i TLS-forbindelsen. Et TCP-brudd kan fortsatt gjøre utfallet av en kommando ukjent.
 
 ## 4. Portnummer
 
@@ -48,7 +48,7 @@ Kontrollpanelet kan markere en avvikende temperatur ved visning, for eksempel n�
 
 ## 7. Tilkobling og tilstand
 
-Protokollen er tilkoblingsorientert og har tilstand. Første melding på en ny forbindelse må være en av de to `HELLO`-meldingene. Ved `READY;1` blir forbindelsen registrert og kan gjenbrukes. En registrert klient kan ikke skifte identitet på samme forbindelse.
+Protokollen er tilkoblingsorientert og har tilstand. Etter et vellykket TLS-håndtrykk må første applikasjonsmelding være en av de to `HELLO`-meldingene. Ved `READY;1` blir forbindelsen registrert og kan gjenbrukes. En registrert klient kan ikke skifte identitet på samme forbindelse.
 
 Et kontrollpanel venter på svar før det sender neste forespørsel. Serveren har høyst én utestående forespørsel per sensornode, inkludert forbindelsessjekker. Kommer det en ny forespørsel til en opptatt node, svarer serveren med `ERROR;BUSY`. Dermed kan svaret kobles til riktig forespørsel uten egne forespørsels-ID-er. En avbrutt nodeforbindelse fjernes fra registeret.
 
@@ -150,7 +150,9 @@ Serveren har en lokal konfigurasjon som knytter hver tillatt node-ID til et toke
 | Tekniker | Se noder, komponenter, målinger og status for feilsøking. |
 | Gjest | Se noder, komponenter og sensormålinger. |
 
-Token skal holdes utenfor Git og utelates fra logger. TCP-trafikken i dette designet er ukryptert. En som kan lese trafikken, kan se token og meldinger. Første versjon er derfor avgrenset til lokal utvikling og et kontrollert demonstrasjonsnett. Ved bruk utenfor dette miljøet må transporten beskyttes, for eksempel med TLS.
+TLS 1.3 gir kryptering, integritetsbeskyttelse og autentisering av mellomserveren. Både sensornoder og kontrollpaneler har en lokal kopi av serverens offentlige X.509-sertifikat. Klienten kontrollerer tillit til sertifikatet og at servernavnet eller IP-adressen stemmer. En mislykket TLS-forbindelse åpner ingen applikasjonsøkt. Hver ny forbindelse går gjennom TLS før klienten sender tokenet i `HELLO`.
+
+Serverens private nøkkel ligger i et passordbeskyttet PKCS#12-nøkkellager. Klientene autentiserer seg med de eksisterende tokenene inne i TLS-forbindelsen. TLS beskytter begge forbindelsene, og serveren leser meldingene for å kontrollere tilgang og rute dem. Vi bruker Java sin TLS-implementasjon slik at applikasjonen kan beholde meldingsformatet sitt og bruke standardisert transportkryptering. Oppsettet er beskrevet i [kjøreveiledningen](docs/running.md). Token, passord og private nøkler holdes utenfor Git og logger.
 
 ## 14. Antakelser
 
