@@ -13,8 +13,16 @@ import no.ntnu.idata2304.smarthome.common.security.TlsContexts;
 public final class ControlPanelApplication {
 
   private static final String USAGE =
-      "Commands: list | read <node ID> <sensor ID> | on <node ID> <actuator ID> "
-          + "| off <node ID> <actuator ID> | status <node ID> <actuator ID> | exit";
+      """
+      Commands
+        list                         Show connected nodes and devices
+        read <node> <sensor>         Read a sensor
+        status <node> <actuator>     Check actuator state
+        on <node> <actuator>         Turn an actuator on
+        off <node> <actuator>        Turn an actuator off
+        help                         Show this menu
+        exit                         Close the control panel
+      """;
   private static final String ID = "[0-9]{1,10}";
   private static final int CACHED_READING_LIMIT = 100;
 
@@ -57,15 +65,30 @@ public final class ControlPanelApplication {
       }
 
       var readings = new LinkedHashMap<String, CachedReading>();
-      System.out.println(USAGE);
-      while (console.hasNextLine()) {
-        String[] command = console.nextLine().trim().split("\\s+");
+      System.out.println();
+      System.out.println("Smart Home | " + userId);
+      System.out.print(USAGE);
+      while (true) {
+        System.out.print("\nsha> ");
+        System.out.flush();
+        if (!console.hasNextLine()) {
+          return;
+        }
+        String input = console.nextLine().strip();
+        if (input.isEmpty()) {
+          continue;
+        }
+        String[] command = input.split("\\s+");
         if (command.length == 1 && command[0].equals("exit")) {
           return;
         }
+        if (command.length == 1 && command[0].equals("help")) {
+          System.out.print(USAGE);
+          continue;
+        }
         String request = toRequest(command);
         if (request == null) {
-          System.out.println(USAGE);
+          System.out.println("Invalid command. Type 'help' to see the available commands.");
           continue;
         }
         String response = request.startsWith("SET_ACTUATOR;")
@@ -91,8 +114,8 @@ public final class ControlPanelApplication {
       showResponse(response);
     } else if (PanelConnection.isTemporaryFailure(response) && readings.containsKey(request)) {
       CachedReading cached = readings.get(request);
-      System.out.println("Latest reading unavailable (" + response + "). "
-          + "Showing cached reading from " + cached.receivedAt() + ".");
+      System.out.println("  Latest reading unavailable (" + response + ").");
+      System.out.println("  Showing cached reading from " + cached.receivedAt() + ".");
       showResponse(cached.response());
     } else {
       showResponse(response);
@@ -151,7 +174,7 @@ public final class ControlPanelApplication {
               + ", sensor "
               + fields[2]
               + ": "
-              + value
+              + fields[4]
               + " "
               + sensorType.getUnit());
 
@@ -169,6 +192,18 @@ public final class ControlPanelApplication {
           "Node " + fields[1] + ", actuator " + fields[2] + " (" + fields[3] + "): " + fields[4]);
     } else if (response.equals("NODES")) {
       System.out.println("No connected sensor nodes.");
+    } else if (response.startsWith("ERROR;")) {
+      String message = switch (response) {
+        case "ERROR;FORBIDDEN" -> "Your account does not have access to this device or action.";
+        case "ERROR;NODE_UNAVAILABLE" -> "The node is not connected.";
+        case "ERROR;SERVER_UNAVAILABLE" -> "The panel cannot reach the server.";
+        case "ERROR;UNKNOWN_SENSOR" -> "That sensor ID does not exist on this node.";
+        case "ERROR;UNKNOWN_ACTUATOR" -> "That actuator ID does not exist on this node.";
+        case "ERROR;BUSY" -> "The node is busy. Try again.";
+        case "ERROR;TIMEOUT" -> "The node did not respond in time.";
+        default -> "The request could not be completed.";
+      };
+      System.out.println(message + " (" + response + ")");
     } else {
       System.out.println(response);
     }
@@ -183,8 +218,10 @@ public final class ControlPanelApplication {
    */
   private static void showConnectedNodes(String response, PanelConnection server)
       throws InterruptedException {
+    System.out.println("Connected nodes");
     for (String nodeId : response.substring(6).split(";")) {
-      System.out.println("Connected sensor node " + nodeId);
+      System.out.println();
+      System.out.println("  Node " + nodeId);
       String devices = server.read("LIST_DEVICES;" + nodeId);
       showDevices(nodeId, devices);
       if (PanelConnection.SERVER_UNAVAILABLE.equals(devices)) {
@@ -202,21 +239,22 @@ public final class ControlPanelApplication {
   private static void showDevices(String nodeId, String response) {
     String[] fields = response.split(";", -1);
     if (fields.length < 2 || !fields[0].equals("DEVICES") || !fields[1].equals(nodeId)) {
-      System.out.println("  Could not list devices: " + response);
+      System.out.println("    Could not list devices: " + response);
       return;
     }
     if (fields.length == 2) {
-      System.out.println("  No devices.");
+      System.out.println("    No devices.");
       return;
     }
+    System.out.printf("    %-10s %-10s %s%n", "Device", "ID", "Type");
     for (int i = 2; i < fields.length; i++) {
       String[] device = fields[i].split(":", -1);
       if (device.length != 3) {
-        System.out.println("  Invalid device: " + fields[i]);
+        System.out.println("    Invalid device: " + fields[i]);
         continue;
       }
       String category = device[0].equals("SENSOR") ? "Sensor" : "Actuator";
-      System.out.println("  " + category + " ID " + device[1] + " (" + device[2] + ")");
+      System.out.printf("    %-10s %-10s %s%n", category, device[1], device[2]);
     }
   }
 }
