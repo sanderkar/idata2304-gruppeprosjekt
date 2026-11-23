@@ -9,10 +9,14 @@ root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$root"
 
 jdk_bin="${JAVA_HOME:+$JAVA_HOME/bin/}"
+if [[ -n "${JAVA_HOME:-}" ]] && command -v cygpath >/dev/null 2>&1; then
+  jdk_bin="$(cygpath -u "$JAVA_HOME")/bin/"
+fi
 java="${jdk_bin}java"
 javac="${jdk_bin}javac"
 keytool="${jdk_bin}keytool"
-if ! version="$("$javac" -version 2>&1)" || [[ ! "$version" =~ ^javac\ 25([.+-]|$) ]]; then
+if ! version="$("$javac" -version 2>&1)" \
+    || [[ ! "${version%$'\r'}" =~ ^javac\ 25([.+-]|$) ]]; then
   echo "The local demo needs JDK 25. Set JAVA_HOME to its installation and run this again." >&2
   exit 1
 fi
@@ -45,6 +49,7 @@ cleanup() {
       wait "$pid" 2>/dev/null || true
     fi
   done
+  cd "$root"
   rm -rf -- "$work"
 }
 trap cleanup EXIT

@@ -2,16 +2,27 @@
 
 ## Quick start
 
-With JDK 25 installed, run this from the project root on macOS or Linux.
+Install JDK 25 and open a terminal in the project root.
+
+On macOS or Linux, run:
 
 ```sh
 ./run-local.sh
 ```
 
+On Windows, install Git for Windows and run this in PowerShell:
+
+```powershell
+& "C:\Program Files\Git\bin\bash.exe" ./run-local.sh
+```
+
+If Git is installed elsewhere, open Git Bash in the project root and run
+`bash ./run-local.sh`.
+
 The launcher builds the project, generates temporary credentials and a TLS
 certificate, and opens the control panel in the same terminal. Try `list` or
-`read 12 1`. Type `exit` to stop all three apps and remove the temporary files.
-If port 5000 is busy, run `SMART_HOME_DEMO_PORT=5001 ./run-local.sh`.
+`read 12 1`. Type `help` for commands or `exit` to stop the demo. If port 5000
+is busy, run `SMART_HOME_DEMO_PORT=5001 ./run-local.sh` from Bash.
 
 ## Manual setup
 
@@ -20,7 +31,8 @@ Java 25 and run each application with the project root as its working directory.
 
 Copy `config/local.properties.example` to `config/local.properties` and replace
 the placeholder tokens with your own values. The local file is ignored by Git.
-The server, sensor node and control panel all read this same file automatically.
+When running on one machine from the same project folder, all three apps read
+this file automatically.
 You do not need to enter credentials in each IntelliJ run configuration.
 
 Environment variables override values in the file. Remove old token environment
