@@ -291,7 +291,7 @@ saves it and before the client receives the reply.
 The server reads static node tokens from `SMART_HOME_NODE_<nodeId>_TOKEN`
 and automatically addressed node tokens from
 `SMART_HOME_AUTO_NODE_<deviceName>_TOKEN`.
-`config/panel-users.properties` maps each panel account to a role and a
+`../config/panel-users.properties` maps each panel account to a role and a
 token setting. An account without a configured token is disabled. The
 server checks device permissions before forwarding requests. A node
 connection is reserved for replies to server requests.
@@ -321,7 +321,7 @@ Clients authenticate with tokens sent inside TLS. TLS protects both
 connections, and the broker reads the messages to enforce permissions and
 route requests. Java's TLS implementation provides standardized transport
 encryption while preserving the application message format. See the
-[running guide](docs/running.md) for setup. Keep tokens, passwords, and
+[running guide](running.md) for setup. Keep tokens, passwords, and
 private keys out of Git and application logs.
 
 ## 14. Assumptions

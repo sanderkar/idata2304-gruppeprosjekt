@@ -61,7 +61,7 @@ The server authenticates clients, applies role permissions, and routes requests.
 Sensor nodes simulate readings and actuator state.
 The control panel discovers nodes, displays readings and anomaly warnings, and sends commands to specific devices.
 
-The [protocol specification](protocol.md) describes the message formats, registration, permissions, and error handling.
+The [protocol specification](docs/protocol.md) describes the message formats, registration, permissions, and error handling.
 
 ## Networking extras
 

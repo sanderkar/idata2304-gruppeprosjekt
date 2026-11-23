@@ -8,4 +8,4 @@
 | [Automatic node registration](04-automatic-node-registration.puml) | Token validation, address allocation, and reuse of a saved address |
 | [Connection recovery](05-panel-connection-recovery.puml) | How the control panel detects a connection loss and reconnects |
 
-Open the `.puml` files in a PlantUML preview. Message formats are described in [protocol.md](../../protocol.md).
+Open the `.puml` files in a PlantUML preview. Message formats are described in [protocol.md](../protocol.md).
