@@ -15,7 +15,7 @@ public final class ControlPanelApplication {
   private static final String USAGE =
       "Commands: list | read <node ID> <sensor ID> | on <node ID> <actuator ID> "
           + "| off <node ID> <actuator ID> | status <node ID> <actuator ID> | exit";
-  private static final String ID = "[0-9]{1,9}";
+  private static final String ID = "[0-9]{1,10}";
   private static final int CACHED_READING_LIMIT = 100;
 
   private record CachedReading(String response, Instant receivedAt) {}
@@ -112,8 +112,19 @@ public final class ControlPanelApplication {
     if (command.length != 3 || !command[1].matches(ID) || !command[2].matches(ID)) {
       return null;
     }
-    int nodeId = Integer.parseInt(command[1]);
-    int deviceId = Integer.parseInt(command[2]);
+
+    int nodeId = 0;
+    try {
+      nodeId = Integer.parseInt(command[1]);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+    int deviceId = 0;
+    try {
+      deviceId = Integer.parseInt(command[2]);
+    } catch (NumberFormatException e) {
+      return null;
+    }
     return switch (command[0]) {
       case "read" -> "GET_READING;" + nodeId + ";" + deviceId;
       case "on" -> "SET_ACTUATOR;" + nodeId + ";" + deviceId + ";ON";
