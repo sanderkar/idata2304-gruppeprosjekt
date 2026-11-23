@@ -7,16 +7,27 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-/** Loads shared local credentials, with environment variables taking precedence
- */
+/** Loads shared local credentials, with environment variables taking precedence. */
 public final class LocalConfiguration {
   private LocalConfiguration() {}
-  public record ServerAddress(String host, int port) {}
 
+  /**
+   * Loads the server address from the local configuration.
+   *
+   * @return a ServerAddress object containing the host and port
+   * @throws IOException if an I/O error occurs while reading the configuration
+   */
   public static ServerAddress loadServerAddress() throws IOException {
     return loadServerAddress(loadCredentials());
   }
 
+  /**
+   * Loads the server address from the given configuration map.
+   *
+   * @param configuration a map containing configuration key-value pairs
+   * @return a ServerAddress object containing the host and port
+   * @throws IllegalArgumentException if the host is blank or the port is invalid
+   */
   static ServerAddress loadServerAddress(Map<String, String> configuration) {
     String host = configuration.getOrDefault("SMART_HOME_HOST", "127.0.0.1");
     String portValue = configuration.getOrDefault("SMART_HOME_PORT", "5000");
@@ -33,17 +44,30 @@ public final class LocalConfiguration {
     }
 
     if (port < 1 || port > 65535) {
-      throw new IllegalArgumentException(
-          "Server port must be between 1 and 65535");
+      throw new IllegalArgumentException("Server port must be between 1 and 65535");
     }
 
     return new ServerAddress(host, port);
   }
 
+  /**
+   * Loads credentials from the local properties file and environment variables.
+   *
+   * @return a map containing the loaded credentials
+   * @throws IOException if an I/O error occurs while reading the properties file
+   */
   public static Map<String, String> loadCredentials() throws IOException {
     return loadCredentials(Path.of("config/local.properties"), System.getenv());
   }
 
+  /**
+   * Loads credentials from the specified properties file and environment variables.
+   *
+   * @param path the path to the properties file
+   * @param environment a map containing environment variables
+   * @return a map containing the loaded credentials
+   * @throws IOException if an I/O error occurs while reading the properties file
+   */
   static Map<String, String> loadCredentials(Path path, Map<String, String> environment)
       throws IOException {
     var credentials = new HashMap<String, String>();
@@ -60,6 +84,12 @@ public final class LocalConfiguration {
     return Map.copyOf(credentials);
   }
 
+  /**
+   * Loads panel users from the local properties file.
+   *
+   * @return a Properties object containing the loaded panel users
+   * @throws IOException if an I/O error occurs while reading the properties file
+   */
   public static Properties loadPanelUsers() throws IOException {
     var users = new Properties();
     try (var reader = Files.newBufferedReader(Path.of("config/panel-users.properties"))) {
@@ -67,4 +97,12 @@ public final class LocalConfiguration {
     }
     return users;
   }
+
+  /**
+   * A record representing the address of the server.
+   *
+   * @param host the host of the server
+   * @param port the port of the server
+   */
+  public record ServerAddress(String host, int port) {}
 }
