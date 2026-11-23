@@ -18,10 +18,11 @@ public final class ClientConnection implements Closeable {
   private final BufferedReader reader;
   private final OutputStreamWriter writer;
 
+  /** Creates a new ClientConnection with the given socket. */
   private ClientConnection(Socket socket) throws IOException {
     this.socket = socket;
-    reader = new BufferedReader(
-        new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+    reader =
+        new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
     writer = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8);
   }
 
@@ -50,10 +51,12 @@ public final class ClientConnection implements Closeable {
     }
   }
 
+  /** Sends a message to the server. */
   public void send(String message) throws IOException {
     Protocol.writeLine(writer, message);
   }
 
+  /** Reads a message from the server. */
   public String read() throws IOException {
     String message = Protocol.readLine(reader);
     if (message == null) {
@@ -62,6 +65,7 @@ public final class ClientConnection implements Closeable {
     return message;
   }
 
+  /** Sends a message to the server and waits for a response. */
   public String request(String message) throws IOException {
     send(message);
     return read();

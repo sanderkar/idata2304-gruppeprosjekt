@@ -12,9 +12,8 @@ import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
 
 /** Maintains the panel session and serializes all traffic on it. */
 final class PanelConnection implements AutoCloseable {
-  private static final long READ_RETRY_WINDOW = Duration.ofSeconds(15).toNanos();
   static final String SERVER_UNAVAILABLE = "ERROR;SERVER_UNAVAILABLE";
-
+  private static final long READ_RETRY_WINDOW = Duration.ofSeconds(15).toNanos();
   private final ServerAddress address;
   private final String hello;
   private final ScheduledExecutorService maintenance =
@@ -26,6 +25,13 @@ final class PanelConnection implements AutoCloseable {
   PanelConnection(ServerAddress address, String hello) {
     this.address = address;
     this.hello = hello;
+  }
+
+  static boolean isTemporaryFailure(String response) {
+    return response.equals(SERVER_UNAVAILABLE)
+        || response.equals("ERROR;NODE_UNAVAILABLE")
+        || response.equals("ERROR;TIMEOUT")
+        || response.equals("ERROR;BUSY");
   }
 
   /** Attempts registration immediately and starts checking for outages in the background. */
@@ -54,8 +60,10 @@ final class PanelConnection implements AutoCloseable {
       }
     } catch (RegistrationRejected exception) {
       registrationError = exception.getMessage();
-      System.err.println("Panel registration failed: " + registrationError
-          + ". Check the selected account and server credentials.");
+      System.err.println(
+          "Panel registration failed: "
+              + registrationError
+              + ". Check the selected account and server credentials.");
     } catch (IOException exception) {
       disconnect();
     }
@@ -92,7 +100,8 @@ final class PanelConnection implements AutoCloseable {
     }
     try {
       String response = connection.request(request);
-      if (response.equals("ERROR;NODE_UNAVAILABLE") || response.equals("ERROR;TIMEOUT")
+      if (response.equals("ERROR;NODE_UNAVAILABLE")
+          || response.equals("ERROR;TIMEOUT")
           || response.equals("ERROR;BAD_RESPONSE")) {
         return "Command outcome unknown (" + response + "). Check actuator status.";
       }
@@ -101,11 +110,6 @@ final class PanelConnection implements AutoCloseable {
       disconnect();
       return "Command outcome unknown. Check actuator status after reconnecting.";
     }
-  }
-
-  static boolean isTemporaryFailure(String response) {
-    return response.equals(SERVER_UNAVAILABLE) || response.equals("ERROR;NODE_UNAVAILABLE")
-        || response.equals("ERROR;TIMEOUT") || response.equals("ERROR;BUSY");
   }
 
   private void disconnect() {
