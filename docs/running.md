@@ -1,9 +1,22 @@
 # Running locally
 
-Use Java 25. All three applications must use the project root as their working
-directory so they can read the `config` directory.
+## Quick start
 
-## One-time setup
+With JDK 25 installed, run this from the project root on macOS or Linux.
+
+```sh
+./run-local.sh
+```
+
+The launcher builds the project, generates temporary credentials and a TLS
+certificate, and opens the control panel in the same terminal. Try `list` or
+`read 12 1`. Type `exit` to stop all three apps and remove the temporary files.
+If port 5000 is busy, run `SMART_HOME_DEMO_PORT=5001 ./run-local.sh`.
+
+## Manual setup
+
+Use this setup for IntelliJ, separate terminals, or separate machines. Use
+Java 25 and run each application with the project root as its working directory.
 
 Copy `config/local.properties.example` to `config/local.properties` and replace
 the placeholder tokens with your own values. The local file is ignored by Git.
@@ -77,7 +90,7 @@ exit
 
 ## Demonstrate recovery after an outage
 
-1. Run the three applications. In the panel, run `read 12 1` and `on 12 2` to
+1. Start the three applications separately. In the panel, run `read 12 1` and `on 12 2` to
    save a temperature reading and turn on the fan.
 2. Stop only the server. Leave the sensor node and panel running. Check that
    the panel reports the interrupted connection.
