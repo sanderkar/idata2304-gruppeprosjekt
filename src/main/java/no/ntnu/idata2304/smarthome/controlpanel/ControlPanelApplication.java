@@ -1,9 +1,5 @@
 package no.ntnu.idata2304.smarthome.controlpanel;
 
-import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
-import no.ntnu.idata2304.smarthome.common.model.SensorType;
-import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -11,10 +7,11 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
+import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
+import no.ntnu.idata2304.smarthome.common.model.SensorType;
+import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
 
-/**
- * Console client for listing nodes and requesting sensor readings.
- */
+/** Console client for listing nodes and requesting sensor readings. */
 public final class ControlPanelApplication {
 
   private static final String USAGE =
@@ -22,13 +19,16 @@ public final class ControlPanelApplication {
           + "| off <node ID> <actuator ID> | status <node ID> <actuator ID> | exit";
   private static final String ID = "[0-9]{1,9}";
 
-  /**
-   * Private constructor to prevent instantiation of the ControlPanelApplication class.
-   */
-
+  /** Private constructor to prevent instantiation of the ControlPanelApplication class. */
   private ControlPanelApplication() {}
 
-  public static void main(String[] args) throws IOException {
+  /**
+   * The main entry point for the control panel application.
+   *
+   * @param args the command-line arguments
+   * @throws IOException if an I/O error occurs
+   */
+  static void main(String[] args) throws IOException {
     String userId = args.length == 0 ? "owner-example" : args[0];
     String tokenName = LocalConfiguration.loadPanelUsers().getProperty(userId + ".token-env");
     if (tokenName == null || tokenName.isEmpty()) {
@@ -37,17 +37,20 @@ public final class ControlPanelApplication {
     }
     String token = LocalConfiguration.loadCredentials().get(tokenName);
     if (token == null || !token.matches("[A-Za-z0-9._-]{1,128}")) {
-      System.err.println("Set " + tokenName
-          + " in config/local.properties or the environment. See docs/running.md.");
+      System.err.println(
+          "Set "
+              + tokenName
+              + " in config/local.properties or the environment. See docs/running.md.");
       return;
     }
 
     var serverAddress = LocalConfiguration.loadServerAddress();
     try (Socket server = new Socket(serverAddress.host(), serverAddress.port());
-         Scanner console = new Scanner(System.in, StandardCharsets.UTF_8)) {
+        Scanner console = new Scanner(System.in, StandardCharsets.UTF_8)) {
       server.setSoTimeout(10_000);
-      var reader = new BufferedReader(
-          new InputStreamReader(server.getInputStream(), StandardCharsets.UTF_8));
+      var reader =
+          new BufferedReader(
+              new InputStreamReader(server.getInputStream(), StandardCharsets.UTF_8));
       var writer = new OutputStreamWriter(server.getOutputStream(), StandardCharsets.UTF_8);
 
       Protocol.writeLine(writer, "HELLO_PANEL;1;" + userId + ";" + token);
@@ -55,8 +58,11 @@ public final class ControlPanelApplication {
       if (!"READY;1".equals(registration)) {
         System.err.println("Panel registration failed: " + registration);
         if ("ERROR;AUTH_FAILED".equals(registration)) {
-          System.err.println("Check that " + tokenName
-              + " matches the server configuration, then restart the server. See docs/running.md.");
+          System.err.println(
+              "Check that "
+                  + tokenName
+                  + " matches the server configuration,"
+                  + "then restart the server. See docs/running.md.");
         }
         return;
       }
@@ -120,18 +126,23 @@ public final class ControlPanelApplication {
    *
    * @param response the response from the server
    */
-
   private static void showResponse(String response) {
     String[] fields = response.split(";", -1);
     if (fields.length == 5 && fields[0].equals("READING")) {
       SensorType sensorType = SensorType.valueOf(fields[3]);
       double value = Double.parseDouble(fields[4]);
 
-      System.out.println("Node " + fields[1] + ", sensor " + fields[2] + ": "
-          + value + " " + sensorType.getUnit());
+      System.out.println(
+          "Node "
+              + fields[1]
+              + ", sensor "
+              + fields[2]
+              + ": "
+              + value
+              + " "
+              + sensorType.getUnit());
 
-      if (sensorType == SensorType.TEMPERATURE
-          && AnomalyDetector.isTemperatureColdAnomaly(value)) {
+      if (sensorType == SensorType.TEMPERATURE && AnomalyDetector.isTemperatureColdAnomaly(value)) {
         System.out.println("WARNING: Unusually cold temperature.");
       } else if (sensorType == SensorType.TEMPERATURE
           && AnomalyDetector.isTemperatureHotAnomaly(value)) {
@@ -141,8 +152,8 @@ public final class ControlPanelApplication {
         System.out.println("WARNING: Unusually high humidity.");
       }
     } else if (fields.length == 5 && fields[0].equals("ACTUATOR_STATE")) {
-      System.out.println("Node " + fields[1] + ", actuator " + fields[2] + " (" + fields[3]
-          + "): " + fields[4]);
+      System.out.println(
+          "Node " + fields[1] + ", actuator " + fields[2] + " (" + fields[3] + "): " + fields[4]);
     } else if (response.equals("NODES")) {
       System.out.println("No connected sensor nodes.");
     } else {
@@ -159,9 +170,8 @@ public final class ControlPanelApplication {
    * @return true if all nodes were successfully listed, false if the server closed the connection
    * @throws IOException if an I/O error occurs while reading from or writing to the server
    */
-
-  private static boolean showConnectedNodes(String response, BufferedReader reader,
-                                            OutputStreamWriter writer) throws IOException {
+  private static boolean showConnectedNodes(
+      String response, BufferedReader reader, OutputStreamWriter writer) throws IOException {
     for (String nodeId : response.substring(6).split(";")) {
       System.out.println("Connected sensor node " + nodeId);
       Protocol.writeLine(writer, "LIST_DEVICES;" + nodeId);
@@ -180,7 +190,6 @@ public final class ControlPanelApplication {
    * @param nodeId the ID of the sensor node
    * @param response the response from the server containing the list of devices
    */
-
   private static void showDevices(String nodeId, String response) {
     String[] fields = response.split(";", -1);
     if (fields.length < 2 || !fields[0].equals("DEVICES") || !fields[1].equals(nodeId)) {
