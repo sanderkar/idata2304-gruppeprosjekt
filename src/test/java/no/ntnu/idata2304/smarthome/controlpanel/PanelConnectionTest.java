@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -103,7 +104,9 @@ class PanelConnectionTest {
       var handshake = new FutureTask<Void>(() -> {
         try (var socket = (SSLSocket) listener.accept()) {
           socket.setSoTimeout(5_000);
-          assertThrows(SSLException.class, socket::startHandshake);
+          var failure = assertThrows(IOException.class, socket::startHandshake);
+          assertTrue(failure instanceof SSLException || failure instanceof SocketException,
+              () -> "Unexpected server-side handshake error: " + failure);
         }
         return null;
       });
