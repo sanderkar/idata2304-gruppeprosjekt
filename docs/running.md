@@ -97,6 +97,37 @@ lost its reply.
 Pass a node ID as the sensor application's first program argument. For node `13`,
 add `SMART_HOME_NODE_13_TOKEN` to the local file before starting the server.
 
+### Automatic node addresses
+
+Give each automatic node a unique device name and its own token. Names start
+with an uppercase letter and can contain uppercase letters, digits, and
+underscores, up to 32 characters. Put matching credentials on the server and
+the corresponding node. For a local demo, put both entries in your local file
+and replace the sample token values:
+
+```properties
+SMART_HOME_AUTO_NODE_KITCHEN_TOKEN=replace-with-kitchen-token
+SMART_HOME_AUTO_NODE_GARAGE_TOKEN=replace-with-garage-token
+```
+
+1. Start the server. Launch two sensor applications with program arguments
+   `--auto KITCHEN` and `--auto GARAGE`.
+2. Run `list` from the panel to see two different addresses. Each node also
+   prints its address. Use one of them in `read <address> 1` or
+   `status <address> 2`.
+3. Restart the server and run `list` once the nodes reconnect. Both addresses
+   should be the same as before.
+
+The server stores the mapping in `config/state/node-addresses.properties`.
+Keep this file across restarts, redeployments, and backups. Use
+`SMART_HOME_NODE_ADDRESS_FILE` to move it to a writable local directory
+owned by one server instance. Static addresses configured on the server are
+skipped during allocation. If an address was already assigned to an automatic
+node, choose a different static address. Guest device grants still use the
+numeric address shown in the panel.
+
+### Panel accounts
+
 Pass a user ID as the panel application's first program argument. The configured
 example users are `owner-example`, `sha-example`, `guest-example` and
 `technician-example`. The panel selects the matching token name from

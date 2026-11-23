@@ -9,6 +9,7 @@ import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Predicate;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration.ServerAddress;
@@ -20,19 +21,32 @@ public final class ClientConnection implements Closeable {
   private final Socket socket;
   private final BufferedReader reader;
   private final OutputStreamWriter writer;
+  private final String registration;
 
   /** Creates a new ClientConnection with the given socket. */
-  private ClientConnection(Socket socket) throws IOException {
+  private ClientConnection(Socket socket, String hello, Predicate<String> isReady)
+      throws IOException {
     this.socket = socket;
     reader =
         new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
     writer = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8);
+    send(hello);
+    registration = read();
+    if (!isReady.test(registration)) {
+      throw new RegistrationRejected(registration);
+    }
   }
 
   /** Verifies the TLS peer and completes registration before returning the connection. */
   public static ClientConnection connect(
       ServerAddress address, SSLSocketFactory factory, String hello, int readTimeout)
       throws IOException {
+    return connect(address, factory, hello, readTimeout, "READY;1"::equals);
+  }
+
+  /** Opens a verified TLS session with the registration reply expected by the caller. */
+  public static ClientConnection connect(ServerAddress address, SSLSocketFactory factory,
+      String hello, int readTimeout, Predicate<String> isReady) throws IOException {
     var tcp = new Socket();
     Socket socket = tcp;
     try {
@@ -48,12 +62,7 @@ public final class ClientConnection implements Closeable {
       tls.startHandshake();
 
       tls.setSoTimeout(3_000);
-      var connection = new ClientConnection(tls);
-      connection.send(hello);
-      String registration = connection.read();
-      if (!"READY;1".equals(registration)) {
-        throw new RegistrationRejected(registration);
-      }
+      var connection = new ClientConnection(tls, hello, isReady);
       tls.setSoTimeout(readTimeout);
       return connection;
     } catch (IOException | RuntimeException exception) {
@@ -64,6 +73,10 @@ public final class ClientConnection implements Closeable {
       }
       throw exception;
     }
+  }
+
+  public String registration() {
+    return registration;
   }
 
   /** Sends a message to the server. */

@@ -2,6 +2,7 @@ package no.ntnu.idata2304.smarthome.server;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -11,6 +12,7 @@ import java.io.OutputStreamWriter;
 import java.io.StringReader;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Properties;
 
@@ -18,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /** Tests login and role enforcement through panel messages  */
 class ServerRoleTest {
+  @TempDir Path directory;
   private final ServerSocket socket = new ServerSocket(); // Unbound, no listening port needed
 
   ServerRoleTest() throws Exception {}
@@ -40,7 +43,9 @@ class ServerRoleTest {
 
   private String session(Properties users, Map<String, String> environment,
                          String login, String... requests) throws Exception {
-    var server = new ServerApplication(socket, users, environment);
+    var addresses = NodeAddresses.load(Map.of(
+        "SMART_HOME_NODE_ADDRESS_FILE", directory.resolve("addresses.properties").toString()));
+    var server = new ServerApplication(socket, users, environment, addresses);
     var output = new ByteArrayOutputStream();
     var writer = new OutputStreamWriter(output, StandardCharsets.UTF_8);
     var reader = new BufferedReader(new StringReader(String.join("\n", requests) + "\n"));

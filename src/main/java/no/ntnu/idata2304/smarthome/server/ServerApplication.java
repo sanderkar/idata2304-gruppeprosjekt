@@ -1,6 +1,7 @@
 package no.ntnu.idata2304.smarthome.server;
 
 import no.ntnu.idata2304.smarthome.common.config.LocalConfiguration;
+import no.ntnu.idata2304.smarthome.common.protocol.AutomaticNodeRegistration;
 import no.ntnu.idata2304.smarthome.common.protocol.MessageDecoder;
 import no.ntnu.idata2304.smarthome.common.protocol.Protocol;
 import no.ntnu.idata2304.smarthome.common.security.TlsContexts;
@@ -31,6 +32,7 @@ public final class ServerApplication {
   private final ServerSocket serverSocket;
   private final Properties panelUsers;
   private final Map<String, String> credentials;
+  private final NodeAddresses addresses;
   private final ConcurrentMap<Integer, NodeConnection> nodes = new ConcurrentHashMap<>();
 
   public ServerApplication(int port) throws IOException {
@@ -45,6 +47,7 @@ public final class ServerApplication {
       throws IOException {
     this.panelUsers = LocalConfiguration.loadPanelUsers();
     this.credentials = configuration;
+    this.addresses = NodeAddresses.load(configuration);
     var listener = (SSLServerSocket)
         TlsContexts.forServer(configuration).getServerSocketFactory().createServerSocket();
     listener.setEnabledProtocols(new String[] {TlsContexts.PROTOCOL});
@@ -62,10 +65,12 @@ public final class ServerApplication {
   }
 
   /** Supplies configuration and a socket for isolated tests  */
-  ServerApplication(ServerSocket serverSocket, Properties panelUsers, Map<String, String> environment) {
+  ServerApplication(ServerSocket serverSocket, Properties panelUsers, Map<String, String> environment,
+                    NodeAddresses addresses) {
     this.serverSocket = serverSocket;
     this.panelUsers = panelUsers;
     this.credentials = environment;
+    this.addresses = addresses;
   }
 
   /**
@@ -122,6 +127,7 @@ public final class ServerApplication {
 
     switch (message.split(";", 2)[0]) {
       case "HELLO_NODE" -> handleNode(client, reader, writer, message);
+      case AutomaticNodeRegistration.HELLO -> handleAutomaticNode(client, reader, writer, message);
       case "HELLO_PANEL" -> handlePanel(reader, writer, message);
       default -> Protocol.writeLine(writer, "ERROR;BAD_STATE");
     }
@@ -155,7 +161,42 @@ public final class ServerApplication {
       Protocol.writeLine(writer, "ERROR;BAD_FORMAT");
       return;
     }
+    if (addresses.isAssigned(nodeId)) {
+      Protocol.writeLine(writer, "ERROR;ADDRESS_IN_USE");
+      return;
+    }
 
+    serveNode(client, reader, writer, nodeId, heartbeat, "READY;1");
+  }
+
+  private void handleAutomaticNode(
+      Socket client, BufferedReader reader, OutputStreamWriter writer, String message)
+      throws IOException {
+    final AutomaticNodeRegistration registration;
+    try {
+      registration = AutomaticNodeRegistration.decode(message);
+    } catch (IllegalArgumentException exception) {
+      Protocol.writeLine(writer, "ERROR;BAD_FORMAT");
+      return;
+    }
+    String name = registration.deviceName();
+    if (!registration.token().equals(credentials.get(AutomaticNodeRegistration.tokenSetting(name)))) {
+      Protocol.writeLine(writer, "ERROR;AUTH_FAILED");
+      return;
+    }
+    final int nodeId;
+    try {
+      nodeId = addresses.addressFor(name);
+    } catch (IOException exception) {
+      System.err.println("Could not assign a node address: " + exception.getMessage());
+      Protocol.writeLine(writer, "ERROR;ADDRESS_UNAVAILABLE");
+      return;
+    }
+    serveNode(client, reader, writer, nodeId, true, AutomaticNodeRegistration.ready(nodeId));
+  }
+
+  private void serveNode(Socket client, BufferedReader reader, OutputStreamWriter writer,
+                         int nodeId, boolean heartbeat, String registrationReply) throws IOException {
     var node = new NodeConnection(client, writer);
     if (nodes.putIfAbsent(nodeId, node) != null) {
       Protocol.writeLine(writer, "ERROR;DUPLICATE_NODE");
@@ -164,7 +205,7 @@ public final class ServerApplication {
 
     Thread heartbeatThread = null;
     try {
-      node.sendReady();
+      node.sendReady(registrationReply);
       System.out.println("Registered node " + nodeId);
       if (heartbeat) {
         heartbeatThread = Thread.startVirtualThread(node::keepAlive);

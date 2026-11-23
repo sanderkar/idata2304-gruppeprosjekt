@@ -12,6 +12,11 @@ SMART_HOME_TLS_KEYSTORE_PASSWORD=replace-with-keystore-password
 # SMART_HOME_TLS_KEYSTORE=config/tls/server.p12
 # SMART_HOME_TLS_CERTIFICATE=config/tls/server.crt
 SMART_HOME_NODE_12_TOKEN=replace-with-node-token
+# Optional. Set matching tokens on the server and the corresponding automatic nodes.
+# SMART_HOME_AUTO_NODE_KITCHEN_TOKEN=replace-with-kitchen-token
+# SMART_HOME_AUTO_NODE_GARAGE_TOKEN=replace-with-garage-token
+# Optional server-only override for the persistent address registry.
+# SMART_HOME_NODE_ADDRESS_FILE=config/state/node-addresses.properties
 SMART_HOME_PANEL_TOKEN=replace-with-owner-token
 SMART_HOME_SHA_TOKEN=replace-with-sha-token
 SMART_HOME_GUEST_TOKEN=replace-with-guest-token

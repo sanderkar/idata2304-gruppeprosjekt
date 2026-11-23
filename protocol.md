@@ -4,7 +4,7 @@
 
 Dette dokumentet beskriver protokollen mellom sensornoder, kontrollpaneler og en mellomserver i SHA. Kontrollpanelet kan finne tilkoblede noder, hente målinger og aktuatorstatus og styre en bestemt aktuator.
 
-Versjon 1 støtter registrering, tilgangskontroll, avlesning og styring av simulerte enheter. Trafikken er kryptert med TLS 1.3. Klientene kobler seg til på nytt ved midlertidige nettverksbrudd.
+Versjon 1 støtter registrering, tilgangskontroll, avlesning og styring av simulerte enheter. Serveren kan tildele adresser automatisk til sensornoder. Trafikken er kryptert med TLS 1.3. Klientene kobler seg til på nytt ved midlertidige nettverksbrudd.
 
 ## 2. Terminologi
 
@@ -38,7 +38,7 @@ Kontrollpanelet trenger bare adressen til serveren og identifikatorene til utsty
 
 ## 6. Informasjonsflyt
 
-1. En sensornode kobler til og sender `HELLO_NODE`. Serveren sjekker legitimasjonen og registrerer noden.
+1. En sensornode kobler til og sender `HELLO_NODE` med en statisk adresse eller `HELLO_AUTO_NODE` for å få en adresse fra serveren. Serveren sjekker legitimasjonen og registrerer noden.
 2. Et kontrollpanel kobler til og sender `HELLO_PANEL`. Serveren sjekker legitimasjonen og henter rollen fra sin konfigurasjon.
 3. Kontrollpanelet sender `LIST_NODES` for å oppdage aktive noder og `LIST_DEVICES` for å se hvilke komponenter en node har.
 4. Kontrollpanelet spør etter målinger og status med `GET_READING` og `GET_ACTUATOR`. Dette er en pull-modell. Kontrollpanelet kan spørre på nytt ved behov eller med jevne mellomrom.
@@ -48,7 +48,7 @@ Kontrollpanelet kan markere en avvikende temperatur ved visning, for eksempel n�
 
 ## 7. Tilkobling og tilstand
 
-Protokollen er tilkoblingsorientert og har tilstand. Etter et vellykket TLS-håndtrykk må første applikasjonsmelding være en av de to `HELLO`-meldingene. Ved `READY;1` blir forbindelsen registrert og kan gjenbrukes. En registrert klient kan ikke skifte identitet på samme forbindelse.
+Protokollen er tilkoblingsorientert og har tilstand. Etter et vellykket TLS-håndtrykk må første applikasjonsmelding være en `HELLO`-melding. Ved `READY;1` eller `READY_NODE;1;<nodeId>` er forbindelsen registrert og kan gjenbrukes. En registrert klient kan ikke skifte identitet på samme forbindelse.
 
 Et kontrollpanel venter på svar før det sender neste forespørsel. Serveren har høyst én utestående forespørsel per sensornode, inkludert forbindelsessjekker. Kommer det en ny forespørsel til en opptatt node, svarer serveren med `ERROR;BUSY`. Dermed kan svaret kobles til riktig forespørsel uten egne forespørsels-ID-er. En avbrutt nodeforbindelse fjernes fra registeret.
 
@@ -58,6 +58,7 @@ Et kontrollpanel venter på svar før det sender neste forespørsel. Serveren ha
 | --- | --- |
 | `version` | Heltall. Denne versjonen bruker `1`. |
 | `nodeId`, `sensorId`, `actuatorId`, `heaterId` | Heltall fra 0 til 2147483647, skrevet med ASCII-sifre. Node-ID er unik blant registrerte noder. Sensor-ID er unik blant sensorer på noden, og aktuator-ID er unik blant aktuatorer på noden. `heaterId` er aktuator-ID-en til en varmeovn. |
+| `deviceName` | Navn for automatisk tildeling. Det har 1–32 tegn, begynner med en stor ASCII-bokstav og kan deretter inneholde store ASCII-bokstaver, sifre og understrek. |
 | `userId`, `token` | Ikke-tomme strenger på opptil 128 tegn fra `A-Z`, `a-z`, `0-9`, punktum, bindestrek og understrek. Token behandles som en hemmelig verdi. |
 | `sensorType` | `TEMPERATURE` for grader Celsius og `HUMIDITY` for relativ luftfuktighet i prosent fra 0 til 100. |
 | `actuatorType` | `HEATER` for varmeovn og `FAN` for vifte. |
@@ -74,8 +75,9 @@ Hver melding er én UTF-8-linje på maksimalt 4096 byte før linjeskiftet. Avsen
 | --- | --- | --- |
 | `HELLO_NODE;<version>;<nodeId>;<token>` | Node → server | `READY;1` |
 | `HELLO_NODE;<version>;<nodeId>;<token>;HEARTBEAT` | Node → server | `READY;1` |
+| `HELLO_AUTO_NODE;<version>;<deviceName>;<token>` | Node → server | `READY_NODE;1;<nodeId>` |
 | `HELLO_PANEL;<version>;<userId>;<token>` | Kontrollpanel → server | `READY;1` |
-| `PING` | Kontrollpanel → server eller server → node med `HEARTBEAT` | `PONG` tilbake til avsenderen |
+| `PING` | Kontrollpanel → server eller server → automatisk node eller statisk node med `HEARTBEAT` | `PONG` tilbake til avsenderen |
 | `LIST_NODES` | Kontrollpanel → server | `NODES` etterfulgt av ett semikolonseparert felt per aktiv node-ID |
 | `LIST_DEVICES;<nodeId>` | Kontrollpanel → server → node | `DEVICES;<nodeId>` etterfulgt av ett felt per komponent |
 | `GET_READING;<nodeId>;<sensorId>` | Kontrollpanel → server → node | `READING;<nodeId>;<sensorId>;<sensorType>;<value>` |
@@ -101,6 +103,8 @@ Feil sendes som `ERROR;<code>`. Kontrollpanelet viser en forklaring til brukeren
 | `AUTH_FAILED` | Legitimasjonen er ugyldig. |
 | `FORBIDDEN` | Brukerens rolle mangler tilgang til handlingen. |
 | `DUPLICATE_NODE` | En aktiv node er allerede registrert med ID-en. |
+| `ADDRESS_IN_USE` | En statisk node prøver å bruke en adresse som allerede er tildelt en automatisk node. |
+| `ADDRESS_UNAVAILABLE` | Serveren kunne ikke tildele og lagre en ny adresse. |
 | `NODE_UNAVAILABLE` | Ingen aktiv forbindelse finnes for node-ID-en, eller den forsvinner mens et svar ventes. |
 | `WRONG_NODE` | En sensornode mottar en forespørsel adressert til en annen node. |
 | `UNKNOWN_SENSOR` | Sensor-ID-en finnes ikke på noden. |
@@ -132,6 +136,15 @@ Node 12 har temperatursensor 1 og varmeovn 3. Nodens og eierens legitimasjon er 
 
 Brukeren ser 18 °C og slår på ovnen. Kontrollpanelet viser ovnen som på først etter at svarmeldingen er mottatt.
 
+### Automatisk adressetildeling
+
+1. En node startes med `--auto KITCHEN` og sender `HELLO_AUTO_NODE;1;KITCHEN;kitchen-example` over TLS.
+2. Serveren sjekker tokenet som er konfigurert for `KITCHEN`. Første gang velger den en ledig adresse i intervallet 100000–999999999 og lagrer tildelingen før den svarer. Serveren hopper over alle konfigurerte statiske adresser, også for noder som er frakoblet.
+3. Serveren svarer for eksempel `READY_NODE;1;100000`. Noden bruker adressen i de vanlige protokollmeldingene, og panelet kan finne den med `LIST_NODES`. Automatiske noder svarer på forbindelsessjekker.
+4. Ved gjenoppkobling og etter omstart finner serveren samme adresse ut fra nodenavnet. En ekstra forbindelse for en node som allerede er aktiv får `ERROR;DUPLICATE_NODE`. Tildelinger beholdes når en node kobler fra, slik at adressebaserte tilgangsregler og panelkommandoer fortsetter å peke på samme node.
+
+Dette lar serveren sikre unike, stabile adresser selv når flere noder starter samtidig. Hver node trenger bare et klargjort navn og token for å be om en adresse.
+
 ## 12. Pålitelighet
 
 - **Oppdage brudd.** Kontrollpanelet sjekker forbindelsen med `PING` i bakgrunnen. Det venter to sekunder mellom sjekkene og inntil ti sekunder på svar. Serveren prøver å sende `PING` til en node med `HEARTBEAT` etter tre sekunder og hopper over sjekken hvis noden allerede har en forespørsel. Serveren venter inntil fem sekunder på svar fra noden, og noden venter inntil femten sekunder på neste melding. Forbindelsessjekkene gjør at også et brudd uten TCP-avslutning kan oppdages når ingen bruker systemet. Eldre noder kan fortsatt bruke registreringsformatet uten `HEARTBEAT`.
@@ -142,7 +155,7 @@ Brukeren ser 18 °C og slår på ovnen. Kontrollpanelet viser ovnen som på før
 
 ## 13. Sikkerhet
 
-Serveren har en lokal konfigurasjon som knytter hver tillatt node-ID til et token og hver bruker-ID til et token og en rolle. Tilgang avgjøres på serveren før videresending. En nodeforbindelse kan svare på forespørsler som er sendt til den, men har ikke tilgang til kontrollpanelkommandoer.
+Serveren har en lokal konfigurasjon som knytter hver tillatt statiske node-ID og hvert tillatte automatiske nodenavn til et token. Konfigurasjonen knytter også hver bruker-ID til et token og en rolle. Tilgang avgjøres på serveren før videresending. En nodeforbindelse kan svare på forespørsler som er sendt til den, men har ikke tilgang til kontrollpanelkommandoer.
 
 | Rolle | Tillatt tilgang |
 | --- | --- |
@@ -156,8 +169,8 @@ Serverens private nøkkel ligger i et passordbeskyttet PKCS#12-nøkkellager. Kli
 
 ## 14. Antakelser
 
-- Sensorer og aktuatorer er simulert. Noder får ID og komponentoppsett fra lokal konfigurasjon.
+- Sensorer og aktuatorer er simulert. Noder har et lokalt komponentoppsett og får adressen fra programargumentet eller serveren.
 - Mellomserveren er eneste kontaktpunkt. En server er tilstrekkelig for demonstrasjonen og gir ett sted å registrere noder og håndheve tilgang.
 - Linjebaserte meldinger med faste felt er valgt for at de skal være enkle å lese og feilsøke.
-- Meldinger og registreringer lagres ikke permanent på serveren. Etter omstart registrerer klientene seg igjen.
+- Meldinger og aktive forbindelser lagres i minnet. Serveren lagrer automatiske adressetildelinger lokalt, slik at klientene kan få samme adresse når de registrerer seg etter en omstart.
 - Kontrollpanelet spør etter gjeldende verdier. Historiske målinger, abonnement og automatisk styring inngår ikke i versjon 1.

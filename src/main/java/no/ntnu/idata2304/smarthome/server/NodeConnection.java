@@ -38,13 +38,14 @@ final class NodeConnection {
   }
   
   /**
-   * Sends a "READY" message to the sensor node, indicating that the connection is active.
+   * Sends the registration response to the node and then makes it available to panels.
    *
+   * @param registrationReply the registration response for this node
    * @throws IOException if an I/O error occurs while sending the message
    */
 
-  synchronized void sendReady() throws IOException {
-    Protocol.writeLine(writer, "READY;1");
+  synchronized void sendReady(String registrationReply) throws IOException {
+    Protocol.writeLine(writer, registrationReply);
     active = true;
   }
   
